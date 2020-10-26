@@ -27,6 +27,7 @@ tw_retrieve %>%
   group_by(screen_name) %>%
   summarize(n = n())
 
+### selecting variables
 #display_text width - changes in length?
 #favorite_count / retweet_count - check which are enabled and disabled, what's common there?
 ##hashtags - don't know if i needed, maybe i can check with regex
@@ -34,4 +35,28 @@ tw_retrieve %>%
 tw_media <- tw_retrieve %>%
   select(name, created_at, text, source, display_text_width, is_retweet,
          favorite_count, retweet_count, lang, geo_coords)
+
+### clean?
+reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d#@]))"
+temp <- tw_media %>%
+  #erases tweets beginning with quotes. problem is some tweets begin with some name in quotes. tweet itself is not a quote
+  #maybe erase rt before?
+  filter(!str_detect(text, '^"')) %>%
+  select(-geo_coords) %>%
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
+  unnest_tokens(word, text, token = "regex", pattern = reg) %>%
+  filter(!word %in% stop_words$word,
+         str_detect(word, "[a-z]"))
+  
+temp %>%
+  group_by(name) %>%
+  count(word) %>%
+  arrange(desc(n)) %>%
+  filter(name == "The Wall Street Journal") %>%
+  head(20)
+
+?unnest_tokens
+
+table(temp$is_retweet)
+table(tw_media$is_retweet)
 
