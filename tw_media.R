@@ -3,6 +3,7 @@ library(tidyverse)
 library(tidytext) #tokenize
 library(stopwords)
 
+library(scales) #for scales in graphs
 library(reactable) #for tables
 library(lubridate) #for dates
 
@@ -80,7 +81,65 @@ tw_media %>%
 tw_media %>%
   mutate(day_s = as_date(created_at)) %>%
   group_by(name, day_s) %>%
-  summarise(n = n(), .groups = 'drop') 
+  summarise(n = n(), .groups = 'drop')
+
+### daytime
+# bar plot
+tw_media %>%
+  count(name, hour = lubridate::hour(with_tz(created_at, 'EST'))) %>%
+  mutate(percent = n / sum(n)) %>%
+  ggplot(aes(hour, n, color = name)) +
+  geom_bar(stat = 'identity') +
+  facet_wrap(. ~ name, ncol = 1)
+  
+# line plot
+tw_media %>%
+  count(name, hour = lubridate::hour(with_tz(created_at, 'EST'))) %>%
+  mutate(percent = n / sum(n)) %>%
+  ggplot(aes(hour, n, color = name)) +
+  geom_line() +
+  scale_y_continuous(labels = percent_format()) +
+  labs(x = "Hour of day",
+       y = "% of tweets",
+       color = "")
+
+### lenght and number of words
+# length of tweet
+tw_media %>%
+  group_by(name) %>%
+  ggplot() +
+  geom_boxplot(aes(name, display_text_width))
+
+# number of total words
+tw_words %>% 
+  group_by(name) %>%
+  mutate(words_total = n()) %>%
+  select(name, words_total) %>% unique() %>%
+  ggplot() +
+  geom_bar(aes(name, words_total), stat = "identity")
+
+# number of unique words
+tw_words %>% 
+  group_by(name) %>%
+  count(word) %>%
+  mutate(words_total = n()) %>%
+  select(name, words_total) %>% unique() %>%
+  ggplot() +
+  geom_bar(aes(name, words_total), stat = "identity")
+
+### more used words by media
+tw_words %>% 
+  group_by(name) %>%
+  count(word) %>%
+  arrange(name,desc(n)) %>%
+  #group_by(name) %>%
+  top_n(20) %>%
+  ggplot(aes(reorder(word, n), n), fill = name) + #, fill = name
+  geom_col() +
+  #geom_bar(stat = 'identity') +
+  coord_flip() +
+  facet_wrap(. ~ name, scales = "free_y")
+
 
 
 ?as_date
