@@ -59,7 +59,9 @@ tw_words %>%
   #arrange(n) %>%
   arrange(desc(n)) %>%
   #filter(name == "The Wall Street Journal") %>%
-  head(20)
+  top_n(10) %>%
+  ggplot(aes(reorder(word,n), n)) +
+  geom_bar(stat = "identity")
 
 ### timeline
 ggplot(tw_media, aes(x = as.Date(created_at), fill = name)) +
@@ -131,15 +133,40 @@ tw_words %>%
 tw_words %>% 
   group_by(name) %>%
   count(word) %>%
-  arrange(name,desc(n)) %>%
+  #arrange(name,desc(n)) %>%
   #group_by(name) %>%
-  top_n(20) %>%
-  ggplot(aes(reorder(word, n), n), fill = name) + #, fill = name
+  top_n(10) %>%
+  mutate(word = factor(word, levels = word[order(n)])) %>%
+  ggplot(aes(reorder_within(word, n, name), n, fill = name)) + #reorder_within from tidytext. reorders values but adds '_'
   geom_col() +
+  scale_x_reordered() + #from tidy text. removes '_'
   #geom_bar(stat = 'identity') +
   coord_flip() +
   facet_wrap(. ~ name, scales = "free_y")
 
+### word frequencies as proportion
+frequency_pol <- tw_words %>%
+  filter(!name %in% c("The New York Times", "The Washington Post")) %>%
+  select(name, word) %>%
+  count(name, word) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  gather(name, proportion, 'Financial Times':'The Wall Street Journal')
 
+ggplot(frequency_pol, aes(proportion, Bloomberg, color = abs(Bloomberg - proportion))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_gradient(limits = c(0, 0.001),
+                       low = "darkslategray4", high = "gray75") +
+  facet_wrap(.~name, ncol = 2) +
+  theme(legend.position = "none")
 
-?as_date
+?reorder_within
+"
+https://miguelgfierro.com/blog/2017/a-gentle-introduction-to-text-classification-and-sentiment-analysis/#
+"
