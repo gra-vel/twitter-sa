@@ -85,6 +85,11 @@ tw_media %>%
   group_by(name, day_s) %>%
   summarise(n = n(), .groups = 'drop')
 
+"
+Bigger rate in Bloomberg. For the rest of newspapers there is a quite similar trend
+with weekends showing less tweets.
+"
+
 ### daytime
 # bar plot
 tw_media %>%
@@ -105,12 +110,22 @@ tw_media %>%
        y = "% of tweets",
        color = "")
 
+"
+In a bar plot is easier to see the behavior and trends of each media. However,
+with the line plot is easier to compare. First may be more appropriate, because
+FT is in a different time zone, although the distribution looks uniform.
+"
+
 ### lenght and number of words
 # length of tweet
 tw_media %>%
   group_by(name) %>%
   ggplot() +
   geom_boxplot(aes(name, display_text_width))
+
+"
+box plot is interesting, but it needs less outliers
+"
 
 # number of total words
 tw_words %>% 
@@ -129,6 +144,11 @@ tw_words %>%
   ggplot() +
   geom_bar(aes(name, words_total), stat = "identity")
 
+"
+changes in total words and unique words is also
+noteworthy
+"
+
 ### more used words by media
 tw_words %>% 
   group_by(name) %>%
@@ -144,8 +164,14 @@ tw_words %>%
   coord_flip() +
   facet_wrap(. ~ name, scales = "free_y")
 
+"
+maybe it would be better to check proportions rather than total values.
+the number of tweets is the same, but because of difference in length, it
+may be better to use %?
+"
+
 ### word frequencies as proportion
-frequency_pol <- tw_words %>%
+frequency_eco <- tw_words %>%
   filter(!name %in% c("The New York Times", "The Washington Post")) %>%
   select(name, word) %>%
   count(name, word) %>%
@@ -155,7 +181,7 @@ frequency_pol <- tw_words %>%
   spread(name, proportion) %>%
   gather(name, proportion, 'Financial Times':'The Wall Street Journal')
 
-ggplot(frequency_pol, aes(proportion, Bloomberg, color = abs(Bloomberg - proportion))) +
+ggplot(frequency_eco, aes(proportion, Bloomberg, color = abs(Bloomberg - proportion))) +
   geom_abline(color = "gray40", lty = 2) +
   geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
   geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
@@ -166,7 +192,105 @@ ggplot(frequency_pol, aes(proportion, Bloomberg, color = abs(Bloomberg - proport
   facet_wrap(.~name, ncol = 2) +
   theme(legend.position = "none")
 
-?reorder_within
+
+frequency_pol <- tw_words %>%
+  filter(name %in% c("The New York Times", "The Washington Post")) %>%
+  select(name, word) %>%
+  count(name, word) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  gather(name, proportion, 'The Washington Post') %>%
+  mutate(`The New York Times` = `The New York Times` * 100,
+         proportion = proportion * 100)
+
+ggplot(frequency_pol, aes(proportion, `The New York Times`, color = abs(`The New York Times` - proportion))) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_gradient(limits = c(0, 0.001),
+                       low = "darkslategray4", high = "gray75") +
+  facet_wrap(.~name, ncol = 2) +
+  theme(legend.position = "none")
+
+
+frequency_total <- tw_words %>%
+  select(name, word) %>%
+  count(name, word) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  select(-Bloomberg) %>%
+  gather(name_eco, proportion_eco, c('Financial Times','The Wall Street Journal')) %>%
+  gather(name_pol, proportion_pol, c('The New York Times', 'The Washington Post')) %>%
+  mutate(proportion_eco = proportion_eco * 100,
+         proportion_pol = proportion_pol * 100)
+
+ggplot(frequency_total, aes(proportion_eco, proportion_pol, color = abs(proportion_eco - proportion_pol))) +
+  geom_abline(color = 'gray40', lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_x_log10() +
+  scale_y_log10() +
+  scale_color_gradient(limits = c(0, 1), #check this scale
+                       low = "darkslategray4", high = "gray75") +
+  facet_wrap(name_eco~name_pol)
+  
+### correlation tests - there is a way to do a table of correlation with all media
+# Financial Times ~ Bloomberg
+cor.test(data = frequency_eco[frequency_eco$name == "Financial Times",], #without data doesn't work
+         ~ proportion + Bloomberg)
+
+# The Wall Street Journal ~ Bloomberg
+cor.test(data = frequency_eco[frequency_eco$name == "The Wall Street Journal",],
+         ~ proportion + Bloomberg)
+
+# Financial Times ~ The Wall Street Journal
+cor.test(data = frequency_eco %>% spread(name, proportion),
+         ~ `Financial Times` + `The Wall Street Journal`)
+
+# The New York Times ~ The Washington Post
+cor.test(data = frequency_pol[frequency_pol$name == "The Washington Post",],
+         ~ proportion + `The New York Times`)
+
+# Financial Times ~ The New York Times
+cor.test(data = frequency_total[frequency_total$name_eco == "Financial Times" & frequency_total$name_pol == "The New York Times",],
+         ~ proportion_eco + proportion_pol)
+
+# Financial Times ~ The Washington Post
+cor.test(data = frequency_total[frequency_total$name_eco == "Financial Times" & frequency_total$name_pol == "The Washington Post",],
+         ~ proportion_eco + proportion_pol)
+
+# The Wall Street Journal ~ The New York Times
+cor.test(data = frequency_total[frequency_total$name_eco == "The Wall Street Journal" & frequency_total$name_pol == "The New York Times",],
+         ~ proportion_eco + proportion_pol)
+
+# The Wall Street Journal ~ The Washington Post
+cor.test(data = frequency_total[frequency_total$name_eco == "The Wall Street Journal" & frequency_total$name_pol == "The Washington Post",],
+         ~ proportion_eco + proportion_pol)
+"
+at the end, it would be better to use only four outlets:
+- FT and WSJ for economics
+- NYT and TWP for politics
+correlation does show a correspondence between the pairs. However, there is a large
+correlation between WSJ and NYT, which could be explained by a specific event?
+it's something that could depend on the time frame. I would probably have to limit 
+the time frame for this part.
+"
+
+### sentiment analysis
+#install.packages("textdata") #this is needed to access 'afinn' and 'nrc'
+get_sentiments('nrc') #from tidytext
+
+
+
+
+?get_sentiments
+
 "
 https://miguelgfierro.com/blog/2017/a-gentle-introduction-to-text-classification-and-sentiment-analysis/#
 "
