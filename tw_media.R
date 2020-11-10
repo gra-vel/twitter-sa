@@ -1,3 +1,5 @@
+#install.packages("textdata")
+
 library(rtweet) #for tweet import
 library(tidyverse)
 library(tidytext) #tokenize
@@ -6,6 +8,7 @@ library(stopwords)
 library(scales) #for scales in graphs
 library(reactable) #for tables
 library(lubridate) #for dates
+library(textdata) #to get dictionaries for sentiment analysis
 
 # WSJ - @WSJ, NYT - @nytimes, Bloomberg - @business, FT - @FinancialTimes, The Washington Post - @washingtonpost
 ### api keys
@@ -23,6 +26,14 @@ create_token(app = 'tw_recent',
 tw_retrieve <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/media.csv")
 tw_retrieve2 <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/media2.csv")
 
+"
+2020-10-26 19:46:01	- WP
+2020-10-26 19:30:04 - FT
+2020-10-26 19:37:03	- Bloom
+2020-10-26 19:45:07	- NYT
+2020-10-26 19:51:06	- WSJ
+"
+
 #here I could create a nice table from the statistics book
 names(tw_retrieve)
 tw_retrieve %>%
@@ -36,7 +47,7 @@ tw_retrieve %>%
 #lang - why are there other languages
 tw_media <- tw_retrieve %>%
   select(name, created_at, text, source, display_text_width, is_retweet,
-         favorite_count, retweet_count, lang, geo_coords)
+         favorite_count, retweet_count, lang, geo_coords, status_id)
 
 ### clean
 reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d#@])|^'|'s)" #this term erases everything, except ' when it's in the middle of a word (it's, don't)
@@ -47,7 +58,7 @@ tw_words <- tw_media %>%
   #erases tweets beginning with quotes. problem is some tweets begin with some name in quotes. tweet itself is not a quote
   #maybe erase rt before?
   #filter(!str_detect(text, '^"')) %>%
-  select(-geo_coords) %>%
+  select(-geo_coords, -favorite_count, -retweet_count) %>%
   mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
   unnest_tokens(word, text, token = "regex", pattern = reg) %>% #pattern here says: tokenize everything that is in reg
   filter(!word %in% stop_words$word, #word not in stop_words
@@ -145,8 +156,7 @@ tw_words %>%
   geom_bar(aes(name, words_total), stat = "identity")
 
 "
-changes in total words and unique words is also
-noteworthy
+changes in total words and unique words is also noteworthy
 "
 
 ### more used words by media
@@ -158,7 +168,7 @@ tw_words %>%
   top_n(10) %>%
   mutate(word = factor(word, levels = word[order(n)])) %>%
   ggplot(aes(reorder_within(word, n, name), n, fill = name)) + #reorder_within from tidytext. reorders values but adds '_'
-  geom_col() +
+  geom_col(show.legend = FALSE) +
   scale_x_reordered() + #from tidy text. removes '_'
   #geom_bar(stat = 'identity') +
   coord_flip() +
@@ -284,12 +294,71 @@ the time frame for this part.
 
 ### sentiment analysis
 #install.packages("textdata") #this is needed to access 'afinn' and 'nrc'
-get_sentiments('nrc') #from tidytext
+get_sentiments('nrc') %>% #from tidytext
+  group_by(sentiment) %>%
+  summarize(n = n())
+
+#dataframe for anger, trust, positive and negative
+nrc_anger <- get_sentiments('nrc') %>%
+  filter(sentiment == "anger")
+
+nrc_trust <- get_sentiments('nrc') %>%
+  filter(sentiment == "trust")
+
+nrc_positive <- get_sentiments('nrc') %>%
+  filter(sentiment == "positive")
+
+nrc_negative <- get_sentiments('nrc') %>%
+  filter(sentiment == "negative")
+
+tw_words %>%
+  inner_join(nrc_anger) %>%
+  count(word, sort = TRUE)
+  
+tw_words %>%
+  inner_join(nrc_trust) %>%
+  count(word, sort = TRUE)
+
+tw_words %>%
+  inner_join(nrc_positive) %>%
+  count(word, sort = TRUE)
+
+tw_words %>%
+  inner_join(nrc_negative) %>%
+  count(word, sort = TRUE)
+
+#total daily sentiment for all tweets
+#get_sentiments("bing")
+#get_sentiments("afinn")
+
+tw_words %>%
+  mutate(date_day = as_date(created_at)) %>%
+  mutate(created_at = as.factor(strftime(date_day, format = "%j"))) %>% #%add day of the year variable, V for weeks
+  #mutate(hour_year = (yday(as.POSIXct(created_at)))* 24 + hour(created_at)) %>% #for hours in a year
+  inner_join(get_sentiments("bing")) %>%
+  count(name, index=created_at, sentiment) %>%
+  spread(sentiment, n , fill = 0) %>%
+  mutate(sentiment = positive - negative) %>%
+  ggplot(aes(index, sentiment, fill = name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~name, ncol=1)
+  
+"
+checking the sentiment for each day of the year in the period of interest
+does not yield any meaningful result. this has to do with how words are
+classified.
+i've also tried with hours, but that would work with breaking news probably.
+the only noticeable trend is that NYT and WSJ have more negative words (around -50), than
+FT and WP (around -25). 
+another way to find results will be to use a different segment? 12 hour period?
+or to just check by tweet, once the period for all of them is defined? in that sense, 
+i would be able to check an approximate for each account. 
+"
 
 
 
+?count
 
-?get_sentiments
 
 "
 https://miguelgfierro.com/blog/2017/a-gentle-introduction-to-text-classification-and-sentiment-analysis/#
