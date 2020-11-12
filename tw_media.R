@@ -355,6 +355,37 @@ or to just check by tweet, once the period for all of them is defined? in that s
 i would be able to check an approximate for each account. 
 "
 
+nyt <- tw_words %>%
+  filter(name == "The Wall Street Journal")
+
+afinn <- nyt %>%
+  mutate(date_day = as_date(created_at)) %>%
+  mutate(created_at = as.factor(strftime(date_day, format = "%j"))) %>%
+  inner_join(get_sentiments("afinn")) %>%
+  group_by(index = created_at) %>%
+  summarise(sentiment = sum(value)) %>%
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(
+  nyt %>%
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing"),
+  nyt %>%
+    inner_join(get_sentiments("nrc") %>%
+                 filter(sentiment %in% c("positive", "negative"))) %>%
+    mutate(method = "NRC")) %>%
+  mutate(date_day = as_date(created_at)) %>%
+  mutate(created_at = as.factor(strftime(date_day, format = "%j"))) %>%
+  count(method, index = created_at, sentiment) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+bind_rows(afinn, bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+
+
 
 
 ?count
