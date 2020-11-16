@@ -293,7 +293,20 @@ the time frame for this part.
 "
 
 ### sentiment analysis
+"
+In our work we have decided to apply a lexicon-based approach in order to avoid the need to generate a labelled training set. 
+The main disadvantage of machine learning models is their reliance on labelled data. It is extremely difficult to ensure that 
+sufficient and correctly labelled data can be obtained. Besides this, the fact that a lexicon-based approach can be more easily 
+understood and modified by a human is considered a significant advantage for our work. We found it easier to generate an appropriate 
+lexicon than collect and label relevant corpus. Given that the data pulled from social media are created by users from all over 
+the globe, there is a limitation if the algorithm can only handle English language. Consequently, sentiment analysis algorithm 
+should be more easily transformable into different languages.
+
+Focus on differences between lexicons. Maybe using examples?. Normalizing results between lexicons would be a way to see
+differences more clearly?
+"
 #install.packages("textdata") #this is needed to access 'afinn' and 'nrc'
+#install.packages("vader")
 get_sentiments('nrc') %>% #from tidytext
   group_by(sentiment) %>%
   summarize(n = n())
@@ -327,6 +340,12 @@ tw_words %>%
   inner_join(nrc_negative) %>%
   count(word, sort = TRUE)
 
+library(vader)
+get_vader(tw_media$text[1])
+#vader_result <- vader_df(tw_media$text)
+#save_as_csv(vader_result, "C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/vader_result.csv")
+#write_csv(vader_result, "C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/vader_result2.csv")
+
 #total daily sentiment for all tweets
 #get_sentiments("bing")
 #get_sentiments("afinn")
@@ -356,7 +375,7 @@ i would be able to check an approximate for each account.
 "
 
 nyt <- tw_words %>%
-  filter(name == "The Wall Street Journal")
+  filter(name == "Financial Times")
 
 afinn <- nyt %>%
   mutate(date_day = as_date(created_at)) %>%
@@ -384,6 +403,38 @@ bind_rows(afinn, bing_and_nrc) %>%
   ggplot(aes(index, sentiment, fill = method)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~method, ncol = 1, scales = "free_y")
+
+"
+also consider that there is a larger number of negative words in these lexicons.
+"
+get_sentiments("nrc") %>%
+  filter(sentiment %in% c("positive", "negative")) %>%
+  count(sentiment)
+
+get_sentiments("bing") %>%
+  count(sentiment)
+
+#counting positive and negative words
+bing_word_counts <- tw_words %>%
+  filter(name == 'Financial Times') %>%
+  inner_join(get_sentiments('bing')) %>%
+  count(word, sentiment, sort = TRUE)
+
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(.~sentiment, scales = "free_y") +
+  coord_flip()
+
+"
+problem is that trump is classified as positive word. should be excluded probably.
+"
+
+
 
 
 
