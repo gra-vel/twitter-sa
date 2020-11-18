@@ -1,4 +1,7 @@
 #install.packages("textdata")
+#install.packages("wordcloud")
+#install.packages("wordcloud2")
+#install.packages("reshape2")
 
 library(rtweet) #for tweet import
 library(tidyverse)
@@ -9,6 +12,9 @@ library(scales) #for scales in graphs
 library(reactable) #for tables
 library(lubridate) #for dates
 library(textdata) #to get dictionaries for sentiment analysis
+library(wordcloud2) #for wordcloud
+library(wordcloud) #for comparison cloud
+library(reshape2) #to change shape of df
 
 # WSJ - @WSJ, NYT - @nytimes, Bloomberg - @business, FT - @FinancialTimes, The Washington Post - @washingtonpost
 ### api keys
@@ -416,30 +422,55 @@ get_sentiments("bing") %>%
 
 #counting positive and negative words
 bing_word_counts <- tw_words %>%
-  filter(name == 'Financial Times') %>%
+  #filter(name == 'Financial Times') %>%
   inner_join(get_sentiments('bing')) %>%
+  filter(word != "trump") %>%
+  group_by(name) %>%
   count(word, sentiment, sort = TRUE)
 
 bing_word_counts %>%
-  group_by(sentiment) %>%
+  group_by(name, sentiment) %>%
   top_n(10) %>%
   ungroup() %>%
-  mutate(word = reorder(word, n)) %>%
-  ggplot(aes(word, n, fill = sentiment)) +
+  #mutate(word = reorder(word, n)) %>%
+  #ggplot(aes(word, n, fill = sentiment)) +
+  ggplot(aes(reorder_within(word, n, name), n, fill = sentiment)) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(.~sentiment, scales = "free_y") +
+  scale_x_reordered() +
+  facet_wrap(sentiment~name, ncol = 5, nrow = 2, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
   coord_flip()
 
 "
 problem is that trump is classified as positive word. should be excluded probably.
+the plot here should include 4 columns for each outlet, and 2 rows for each method.
+total three plots. one for each lexicon
 "
 
+### wordcloud
+#small tutorial: https://www.littlemissdata.com/blog/wordclouds
+tw_words %>%
+  anti_join(stop_words) %>%
+  filter(name == "Bloomberg") %>%
+  count(word, sort = TRUE) %>%
+  top_n(1000) %>%
+  wordcloud2(size = 1)
+
+#comparing sentiment in a wordcloud
+tw_words %>%
+  inner_join(get_sentiments("bing")) %>%
+  filter(word != "trump") %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("red", "blue"),
+                   max.words = 100)
+  
 
 
 
 
-
-?count
+?wordcloud2
 
 
 "
