@@ -467,10 +467,74 @@ tw_words %>%
                    max.words = 100)
   
 
+### term frequency
+tw_words_2 <- tw_media %>%
+  unnest_tokens(word, text) %>%
+  count(name, word, sort = TRUE)
 
+tw_total_words <- tw_words_2 %>%
+  group_by(name) %>%
+  summarise(total = sum(n))
+  
+tw_words_2 <- left_join(tw_words_2, tw_total_words)
 
+ggplot(tw_words_2, aes(n/total, fill=name)) +
+  geom_histogram(show.legend = FALSE) +
+  xlim(NA, 0.0009) + 
+  facet_wrap(.~name, ncol=2, scales = "free_y")
 
-?wordcloud2
+### zipf's law
+freq_by_rank <- tw_words_2 %>%
+  group_by(name) %>%
+  mutate(rank = row_number(),
+         frequent = n/total)
+
+freq_by_rank %>%
+  ggplot(aes(rank, frequent, color = name)) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
+  scale_x_log10() +
+  scale_y_log10()
+
+rank_subset <- freq_by_rank %>%
+  filter(rank < 500,
+         rank > 10)
+
+lm(log10(frequent) ~ log10(rank), data = rank_subset)
+
+freq_by_rank %>%
+  ggplot(aes(rank, frequent, color = name)) +
+  geom_abline(intercept = -1.18, slope = -0.905, color = 'gray50', linetype = 2) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
+  scale_x_log10() +
+  scale_y_log10()
+
+### bind_tf_idf
+tw_words_2 <- tw_words_2 %>%
+  bind_tf_idf(word, name, n)
+
+tw_words_2 %>%
+  select(-total) %>%
+  arrange(desc(tf_idf))
+
+#more stop words: wsjwhatsnow, ft, wsjopinion, financialtimes, bw, citylab
+
+tw_words_2 %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  group_by(name) %>%
+  top_n(15) %>%
+  ungroup() %>%
+  ggplot(aes(word, tf_idf, fill = name)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = NULL, y = "tf-idf") +
+  facet_wrap(.~name, ncol = 2, scales = "free") +
+  coord_flip()
+"
+this could be use to find stopwords, considering that here appear the words most used
+by each outlet and not the other.
+"
+
+?lm
 
 
 "
