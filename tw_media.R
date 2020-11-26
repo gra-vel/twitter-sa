@@ -534,7 +534,107 @@ this could be use to find stopwords, considering that here appear the words most
 by each outlet and not the other.
 "
 
-?lm
+### Bigrams
+tw_bigram <- tw_media %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  select(name, bigram)
+
+tw_bigram %>%
+  count(bigram, sort = TRUE)
+
+bigrams_separated <- tw_bigram %>%
+  separate(bigram, c('word1', 'word2'), sep = " ")
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(word1 != 'https') %>%
+  filter(word2 != 'https')
+
+bigram_counts <- bigrams_filtered %>%
+  count(word1, word2, sort = TRUE)
+
+bigrams_united <- bigrams_filtered %>%
+  unite(bigram, word1, word2, sep = " ")
+
+#tf_idf
+bigram_tf_idf <- bigrams_united %>%
+  count(name, bigram) %>%
+  bind_tf_idf(bigram, name, n) %>%
+  arrange(desc(tf_idf))
+
+bigram_tf_idf %>%
+  group_by(name) %>%
+  top_n(n = 10) %>%
+  ggplot(aes(reorder_within(bigram, n, name), n, fill = name)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  scale_x_reordered() +
+  facet_wrap(.~name, scales = "free_y")
+"
+it doesn't really work here, because the most used bigrams per media outlet are 
+the names of the same media outlets or just marketing + url
+"
+
+### Trigrams
+tw_media %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word,
+         !word2 %in% stop_words$word,
+         !word3 %in% stop_words$word,
+         word1 != 'https',
+         word2 != 'https',
+         word3 != 'https') %>%
+  count(word1, word2, word3, sort = TRUE)
+
+### sentiment analysis in bigrams (context)
+#using not
+bigrams_separated %>%
+  filter(word1 == 'not') %>%
+  count(word1, word2, sort = TRUE)
+
+not_words <- bigrams_separated %>%
+  filter(word1 == "not") %>%
+  inner_join(get_sentiments("afinn"), by = c(word2 = "word")) %>%
+  count(word2, value, sort = TRUE) %>%
+  ungroup()
+"
+apparently, there is not a big impact of 'not' before a word.
+"
+not_words %>%
+  mutate(contribution = n * value) %>%
+  arrange(desc(abs(contribution))) %>%
+  head(20) %>%
+  mutate(word2 = reorder(word2, contribution)) %>%
+  ggplot(aes(word2, n * value, fill = n * value > 0)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip()
+"
+the words that most changed the value of each tweet over the entire period
+"
+#using list of negative words
+negation_words <- c("not", "no", "never", "without")
+
+negated_words <- bigrams_separated %>%
+  filter(word1 %in% negation_words) %>%
+  inner_join(get_sentiments('afinn'), by = c(word2 = "word")) %>%
+  count(word1, word2, value, sort = TRUE) %>%
+  ungroup()
+
+negated_words %>%
+  mutate(contribution = n * value) %>%
+  #arrange(desc(word1, contribution))
+  arrange(word1,desc(abs(contribution))) %>%
+  group_by(word1) %>%
+  top_n(10, wt = abs(contribution)) %>%
+  mutate(word2 = reorder(word2, contribution)) %>%
+  ggplot(aes(word2, n * value, fill = n * value > 0)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  facet_wrap(.~word1, ncol = 2, scales = "free")
+
+?top_n
 
 
 "
