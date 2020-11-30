@@ -2,6 +2,9 @@
 #install.packages("wordcloud")
 #install.packages("wordcloud2")
 #install.packages("reshape2")
+#install.packages("igraph")
+#install.packages("ggraph")
+#install.packages("widyr")
 
 library(rtweet) #for tweet import
 library(tidyverse)
@@ -15,6 +18,9 @@ library(textdata) #to get dictionaries for sentiment analysis
 library(wordcloud2) #for wordcloud
 library(wordcloud) #for comparison cloud
 library(reshape2) #to change shape of df
+library(igraph) #for graphs
+library(ggraph) #for graphs visualization
+library(widyr) #to create a matrix out of pairs of words
 
 # WSJ - @WSJ, NYT - @nytimes, Bloomberg - @business, FT - @FinancialTimes, The Washington Post - @washingtonpost
 ### api keys
@@ -634,7 +640,64 @@ negated_words %>%
   coord_flip() +
   facet_wrap(.~word1, ncol = 2, scales = "free")
 
-?top_n
+### Graphs
+#igraph and ggraph
+set.seed(2020)
+bigram_graphs <- bigram_counts %>%
+  filter(n>20) %>%
+  graph_from_data_frame()
+
+ggraph(bigram_graphs, layout = "fr") +
+  geom_edge_link() +
+  geom_node_point() +
+  geom_node_text(aes(label=name), vjust = 1, hjust = 1)
+
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+ggraph(bigram_graphs, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) + #adds arrows and easier to see weigths
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label=name), vjust = 1, hjust = 1) 
+  #theme_void() #doesn't work so good
+
+#functions
+count_bigrams <- function(dataset){
+  dataset %>%
+    unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+    separate(bigram, c("word1", "word2"), sep = " ") %>%
+    filter(!word1 %in% stop_words$word,
+           !word2 %in% stop_words$word) %>%
+    count(word1, word2, sort = TRUE)
+}
+
+visualize_bigrams <- function(bigrams){
+  set.seed(2016)
+  a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+  
+  bigrams %>%
+    graph_from_data_frame() %>%
+    ggraph(layout = "fr") +
+    geom_edge_link(aes(edge_alpha = n), show.legend = FALSE, arrow = a) +
+    geom_node_point(color = "lightblue", size = 5) +
+    geom_node_text(aes(label = name), vjust = 1, hjust = 1)
+}
+
+### Pairs of words
+#widyr
+tw_tweet_word <- tw_media %>%
+  filter(name == "Financial Times") %>%
+  unnest_tokens(word, text) %>%
+  filter(!word %in% stop_words$word,
+         !word %in% c("https", "t.co")) %>%
+  select(name, status_id, word)
+
+word_pairs <- tw_tweet_word %>%
+  pairwise_count(word, status_id, sort = TRUE)
+
+word_pairs %>%
+  filter(item1 == "covid") #the words that repeat the most when 'covid' is present
+
+?pairwise_count
 
 
 "
