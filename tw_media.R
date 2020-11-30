@@ -33,11 +33,11 @@ tw_retrieve <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/
 tw_retrieve2 <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/media2.csv")
 
 "
-2020-10-26 19:46:01	- WP
-2020-10-26 19:30:04 - FT
-2020-10-26 19:37:03	- Bloom
-2020-10-26 19:45:07	- NYT
-2020-10-26 19:51:06	- WSJ
+2020-10-26 19:46:01	- WP - 2020-09-21 16:18:06
+2020-10-26 19:30:04 - FT - 2020-09-03 08:54:29
+2020-10-26 19:37:03	- Bloom - 2020-10-15 12:27:03
+2020-10-26 19:45:07	- NYT - 2020-09-24 17:33:43
+2020-10-26 19:51:06	- WSJ - 2020-09-21 00:47:36
 "
 
 #here I could create a nice table from the statistics book
