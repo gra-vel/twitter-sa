@@ -472,7 +472,8 @@ tw_words %>%
   comparison.cloud(colors = c("red", "blue"),
                    max.words = 100)
   
-
+###########################################################################################################
+##### 3
 ### term frequency
 tw_words_2 <- tw_media %>%
   unnest_tokens(word, text) %>%
@@ -540,6 +541,8 @@ this could be use to find stopwords, considering that here appear the words most
 by each outlet and not the other.
 "
 
+###########################################################################################################
+##### 4
 ### Bigrams
 tw_bigram <- tw_media %>%
   unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
@@ -696,6 +699,42 @@ word_pairs <- tw_tweet_word %>%
 
 word_pairs %>%
   filter(item1 == "covid") #the words that repeat the most when 'covid' is present
+
+### Phi coefficient
+word_cors <- tw_tweet_word %>%
+  group_by(word) %>%
+  filter(n() > 20) %>%
+  pairwise_cor(word, status_id, sort = TRUE)
+
+word_cors %>%
+  filter(item1 == "france")
+
+word_cors %>%
+  filter(item1 %in% c("covid", "trump", "hong", "court")) %>%
+  group_by(item1) %>%
+  top_n(6) %>%
+  ungroup() %>%
+  mutate(item2 = reorder(item2, correlation)) %>%
+  ggplot(aes(item2, correlation)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(.~item1, scales = "free") +
+  coord_flip()
+
+set.seed(2016)
+word_cors %>%
+  filter(correlation > .15) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE)
+  #theme_void()
+
+###########################################################################################################
+##### 5
+### 
+
+
 
 ?pairwise_count
 
