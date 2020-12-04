@@ -65,18 +65,40 @@ tw_media %>%
 The defined time period will cover tweets from 2020-09-21 until 2020-10-26.
 "
 ### Lexicon-based sentiment analyisis
-reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d#@])|^'|'s)"
+#checking for retweets
+tw_media %>%
+  group_by(name, is_retweet) %>%
+  count()
+
+#getting tokens (words)
+#[^A-Za-z\\d#@'] --> it means to match a single that is NOT in a letter (A-Za-z), a symbol(\, #, @) or a number (d)
+#'(?![A-Za-z\\d]) --> ?! negative lookahead. it means check letter or number before '
+#^' --> to check if ' at the beginning of a tweet
+#
+#reg <- ([^A-Za-z\\d#@\\-']|'(?![A-Za-z\\d])|^'|'s)
+#reg <- "([^A-Za-z\\d#@']|'(\\w{2})|'(\\s|$)|'s)"
+reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d])|'s|^'|(?<=\\s)')"
 
 tw_words <- tw_media %>%
-  filter(is_retweet == FALSE) %>%
-  #erases tweets beginning with quotes. problem is some tweets begin with some name in quotes. tweet itself is not a quote
-  #maybe erase rt before?
-  #filter(!str_detect(text, '^"')) %>%
+  #filter(is_retweet == FALSE) %>%
   select(-geo_coords, -favorite_count, -retweet_count) %>%
   mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
   unnest_tokens(word, text, token = "regex", pattern = reg) %>% #pattern here says: tokenize everything that is in reg
   filter(!word %in% stop_words$word, #word not in stop_words
          str_detect(word, "[a-z]"))
+
+test <- tw_words %>%
+  filter(str_detect(word, '"')) %>%
+  arrange(desc(word))
+
+
+#[\s']
+
+"
+There are some things that should be considered in this part. I didn't exclude
+retweets as I plant to see the timeline as a whole. Usually, tweet that start with "'" are deleted, because
+they are considered retweets. However, some tweets start with a quote and they are not necessarily 
+"
 
 
 #marlon puerta
