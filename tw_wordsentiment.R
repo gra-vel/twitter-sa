@@ -65,40 +65,66 @@ tw_media %>%
 The defined time period will cover tweets from 2020-09-21 until 2020-10-26.
 "
 ### Lexicon-based sentiment analyisis
-#checking for retweets
+# checking for retweets
 tw_media %>%
   group_by(name, is_retweet) %>%
   count()
 
-#getting tokens (words)
+"
+I considered deleting retweets, but due to the difference between the four outlets, I decided to keep them.
+Even though some tweets will repeat themselves, the point is too identify what kind of news where given more
+attention in the timeline and that includes retweets as well.
+"
+"
+There are some things that should be considered in this part. I didn't exclude
+retweets as I plant to see the timeline as a whole. Usually, a tweet that starts with ' are deleted, because
+they are considered retweets. However, some tweets start with a quote and they are not necessarily 
+"
+# getting tokens (words)
 #[^A-Za-z\\d#@'] --> it means to match a single that is NOT in a letter (A-Za-z), a symbol(\, #, @) or a number (d)
 #'(?![A-Za-z\\d]) --> ?! negative lookahead. it means check letter or number before '
 #^' --> to check if ' at the beginning of a tweet
-#
 #reg <- ([^A-Za-z\\d#@\\-']|'(?![A-Za-z\\d])|^'|'s)
 #reg <- "([^A-Za-z\\d#@']|'(\\w{2})|'(\\s|$)|'s)"
 reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d])|'s|^'|(?<=\\s)')"
 
 tw_words <- tw_media %>%
-  #filter(is_retweet == FALSE) %>%
+  #filter(is_retweet == FALSE) %>% #checking for retweets
   select(-geo_coords, -favorite_count, -retweet_count) %>%
   mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
-  unnest_tokens(word, text, token = "regex", pattern = reg) %>% #pattern here says: tokenize everything that is in reg
-  filter(!word %in% stop_words$word, #word not in stop_words
-         str_detect(word, "[a-z]"))
+  unnest_tokens(words, text, token = "regex", pattern = reg) %>% #pattern here says: tokenize everything that is in reg
+  filter(!words %in% stop_words$word, #word not in stop_words
+         str_detect(words, "[a-z]"))
 
-test <- tw_words %>%
-  filter(str_detect(word, '"')) %>%
-  arrange(desc(word))
-
-
-#[\s']
+# 10 most common words
+tw_words %>%
+  count(words) %>%
+  arrange(desc(n)) %>%
+  top_n(10) %>%
+  ggplot(aes(reorder(words,n), n)) +
+  geom_bar(stat = "identity", fill = "red", alpha = 0.6) +
+  ggtitle("Ten most common words") +
+  xlab("Words") +
+  ylab("n") +
+  theme_light()
 
 "
-There are some things that should be considered in this part. I didn't exclude
-retweets as I plant to see the timeline as a whole. Usually, tweet that start with "'" are deleted, because
-they are considered retweets. However, some tweets start with a quote and they are not necessarily 
+The first word  appears almost two times more than the second most common word. At first glance, it looks
+like all the words relate between one another, with two distinguishable topics: US election and the pandemic.
 "
+
+### timeline
+tw_media %>%
+  ggplot(aes(as.Date(date), fill = name)) +  
+  geom_histogram(position = 'identity', binwidth = 1, show.legend = FALSE, alpha = 0.65) +
+  geom_histogram(data = subset(tw_media %>%
+                                 mutate(wknds = wday(date)), wknds==7 | wknds==1), 
+                 binwidth = 1, alpha = 0.99, show.legend = FALSE) +
+  ggtitle("Frequency of tweets by day") +
+  xlab("Date") +
+  ylab("Count") +
+  facet_wrap(.~ name, ncol = 1) +
+  theme_light()
 
 
 #marlon puerta
@@ -109,3 +135,6 @@ tw_media %>%
   filter(name == "The Wall Street Journal") %>%
   arrange(desc(date))
 
+test <- tw_words %>%
+  filter(str_detect(word, '"')) %>%
+  arrange(desc(word))
