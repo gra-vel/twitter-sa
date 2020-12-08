@@ -78,7 +78,7 @@ attention in the timeline and that includes retweets as well.
 "
 There are some things that should be considered in this part. I didn't exclude
 retweets as I plant to see the timeline as a whole. Usually, a tweet that starts with ' are deleted, because
-they are considered retweets. However, some tweets start with a quote and they are not necessarily 
+they are considered retweets. However, some tweets start with a quote and they are not necessarily a retweet.
 "
 # getting tokens (words)
 #[^A-Za-z\\d#@'] --> it means to match a single that is NOT in a letter (A-Za-z), a symbol(\, #, @) or a number (d)
@@ -115,9 +115,11 @@ like all the words relate between one another, with two distinguishable topics: 
 
 ### timeline
 tw_media %>%
+  #filter(is_retweet == FALSE) %>%
   ggplot(aes(as.Date(date), fill = name)) +  
   geom_histogram(position = 'identity', binwidth = 1, show.legend = FALSE, alpha = 0.65) +
   geom_histogram(data = subset(tw_media %>%
+                                 #filter(is_retweet == FALSE) %>%
                                  mutate(wknds = wday(date)), wknds==7 | wknds==1), 
                  binwidth = 1, alpha = 0.99, show.legend = FALSE) +
   ggtitle("Frequency of tweets by day") +
@@ -125,6 +127,53 @@ tw_media %>%
   ylab("Count") +
   facet_wrap(.~ name, ncol = 1) +
   theme_light()
+"
+As for the frequency, it looks like the outlets all share an almost uniform distribution with some
+exceptions (fridays). The darker areas represent the weekends with fewer tweets in comparison to weekdays.
+When removing retweets, the distribution remains the same, which suggests that retweets are more or less
+evenly distributed along the timeline.
+"
+
+### rate
+tw_media %>%
+  mutate(date = as_date(date)) %>%
+  group_by(name, date) %>%
+  mutate(n = n()) %>%
+  ggplot(aes(date, n, color = name)) +
+  geom_line(size = 1) +
+  ggtitle("Frequency of tweets by day") +
+  xlab("Date") +
+  ylab("Count") +
+  theme_light() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+"
+Visually, it looks like the two politics-focused media outlets have a higher
+average rate of tweets on weekdays than the business-focused outlets. This 
+difference is more evident towards the end of the week
+"
+### daytime
+tw_media %>%
+  count(name, hour = hour(with_tz(date, 'EST'))) %>% #smotret' perviy i udalit' lubridate
+  mutate(percent = n / sum(n)) %>%
+  ggplot(aes(hour, n, fill = name)) +
+  geom_bar(stat = 'identity', show.legend = FALSE, alpha = 0.5) +
+  geom_bar(data = subset(tw_media %>%
+                           filter(is_retweet == FALSE) %>%
+                           count(name, hour = lubridate::hour(with_tz(date, 'EST'))) %>%
+                           mutate(percent = n / sum(n))),
+           stat = 'identity', show.legend = FALSE) +
+  scale_x_continuous(breaks = unique(hour(with_tz(tw_media$date, 'EST')))) +
+  ggtitle("Time of the day for tweets") +
+  xlab("Hour") +
+  ylab("Count") +
+  facet_wrap(. ~ name, ncol = 1) +
+  theme_light()
+
+
+
+
 
 
 #marlon puerta
