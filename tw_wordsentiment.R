@@ -5,7 +5,7 @@ library(tidyverse)
 library(tidytext) #tokenize
 library(stopwords)
 
-# library(scales) #for scales in graphs
+library(scales) #for scales in graphs
 # library(reactable) #for tables
 library(lubridate) #for dates
 # library(textdata) #to get dictionaries for sentiment analysis
@@ -33,6 +33,7 @@ and 'The Washington Post' are considered as the politics-focused, whereas 'Finan
 # Filtering tweets and defining time period
 tw_media <- tw_original %>%
   mutate(date = as_datetime(created_at)) %>%
+  filter(lang == "en") %>%
   select(name, date, text, source, display_text_width, is_retweet,
          favorite_count, retweet_count, lang, geo_coords, status_id)
   
@@ -165,16 +166,57 @@ tw_media %>%
                            mutate(percent = n / sum(n))),
            stat = 'identity', show.legend = FALSE) +
   scale_x_continuous(breaks = unique(hour(with_tz(tw_media$date, 'EST')))) +
-  ggtitle("Time of the day for tweets") +
+  ggtitle("Time of the day for tweets (EST)") +
   xlab("Hour") +
   ylab("Count") +
   facet_wrap(. ~ name, ncol = 1) +
   theme_light()
 
+"
+For The New Yortk Times and The Washington Post is easier to distinguish the time of
+the day, where more tweets are published, than for the other two outlets. It is important
+to consider that the time for each tweet is adjusted for EST. Besides, the Financial Times
+is a London-based newspaper, which is why it follows a different pattern. Moreover, it is 
+also worth noting that the darker color represents the timeline without retweets, whereas the light
+color are the added retweets. This shows that the time of the day with more tweets is also
+the period with more retweets.
+"
+
+# line plot
+tw_media %>%
+  count(name, hour = hour(with_tz(date, 'EST'))) %>%
+  group_by(name) %>%
+  mutate(percent = n / sum(n)) %>%
+  ggplot(aes(hour, percent, color = name)) +
+  geom_line(size = 1) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.01)) +
+  xlab("Hour") +
+  ylab("%")
+
+### lenght and number of words
+# length of tweet
+tw_media %>%
+  group_by(name) %>%
+  ggplot() +
+  geom_boxplot(aes(name, display_text_width, fill = name))
+
+tw_media %>%
+  #filter(is_retweet == FALSE) %>% 
+  filter(name == "The Washington Post") %>%
+  select(-geo_coords, -favorite_count, -retweet_count) %>%
+  #mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
+  mutate(length = nchar(text)) %>%
+  #arrange(desc(length)) %>%
+  #group_by(name) %>%
+  ggplot(aes(x=status_id, y=length)) +
+  #geom_histogram()
+  geom_bar(stat = 'identity')
+  #geom_boxplot(aes(name, length, fill = name))
 
 
 
 
+?percent_format
 
 #marlon puerta
 
