@@ -34,8 +34,8 @@ and 'The Washington Post' are considered as the politics-focused, whereas 'Finan
 tw_media <- tw_original %>%
   mutate(date = as_datetime(created_at)) %>%
   filter(lang == "en") %>%
-  select(name, date, text, source, display_text_width, is_retweet,
-         favorite_count, retweet_count, lang, geo_coords, status_id)
+  select(name, date, text, source, is_retweet, favorite_count, #201210
+         retweet_count, lang, geo_coords, status_id)
   
 tw_media %>%
   group_by(name) %>%
@@ -74,7 +74,8 @@ tw_media %>%
 "
 I considered deleting retweets, but due to the difference between the four outlets, I decided to keep them.
 Even though some tweets will repeat themselves, the point is too identify what kind of news where given more
-attention in the timeline and that includes retweets as well.
+attention in the timeline and that includes retweets as well. Moreover, there are some outlets that tweet the
+same reports several times, but are not marked as retweets.
 "
 "
 There are some things that should be considered in this part. I didn't exclude
@@ -196,17 +197,19 @@ tw_media %>%
 ### lenght and number of words
 # length of tweet
 tw_media %>%
-  group_by(name) %>%
-  ggplot() +
-  geom_boxplot(aes(name, display_text_width, fill = name))
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
+  mutate(length = nchar(text)) %>%
+  ggplot(aes(x=name, y=length, fill = name)) +
+  geom_boxplot(show.legend = FALSE)
 
-tw_media %>%
+
+test <- tw_media %>%
   #filter(is_retweet == FALSE) %>% 
-  filter(name == "The Washington Post") %>%
+  filter(name == "Financial Times") %>%
   select(-geo_coords, -favorite_count, -retweet_count) %>%
   #mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
   mutate(length = nchar(text)) %>%
-  #arrange(desc(length)) %>%
+  arrange(desc(display_text_width)) %>%
   #group_by(name) %>%
   ggplot(aes(x=status_id, y=length)) +
   #geom_histogram()
