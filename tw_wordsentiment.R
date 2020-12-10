@@ -109,11 +109,80 @@ tw_words %>%
   xlab("Words") +
   ylab("n") +
   theme_light()
-
 "
 The first word  appears almost two times more than the second most common word. At first glance, it looks
 like all the words relate between one another, with two distinguishable topics: US election and the pandemic.
 "
+# number of total words
+tw_words %>%
+  group_by(name) %>%
+  count(words) %>%
+  mutate(total_words = sum(n),
+         unique_words = n()) %>%
+  select(name, total_words, unique_words) %>% unique() %>%
+  ggplot(aes(x = name, y = total_words,  fill = name)) +
+  geom_bar(stat = 'identity', show.legend = FALSE, alpha = 0.6) +
+  geom_bar(aes(y = unique_words), stat = 'identity', show.legend = FALSE) +
+  geom_text(aes(label = total_words), nudge_y = -1000) +
+  geom_text(aes(y = unique_words, label = unique_words), nudge_y = -1000) +
+  ggtitle('Number of total and unique words in tweets') +
+  xlab('') +
+  ylab('Word count') +
+  theme_light()
+
+"
+With the exception of FT, all outlets have around 3200 tweets. The NYT is the one with the most 
+words followed by the WSJ. The darker color shows the numnber of unique words used in each timeline
+At this level, there is less variability than in the count for total words.
+"
+
+# more used words by media
+tw_words %>% 
+  group_by(name) %>%
+  count(words) %>%
+  top_n(10) %>%
+  ggplot(aes(reorder_within(words, n, name), n, fill = name)) +
+  geom_col(show.legend = FALSE) +
+  scale_x_reordered() +
+  coord_flip() +
+  facet_wrap(. ~ name, scales = "free") +
+  ggtitle('Most frequent used word by media outlet') +
+  ylab('Word count') +
+  xlab('Words') +
+  theme_light()
+  
+"
+For these four newspapers, the most used word in this period is 'trump', although it is 
+noticeable that this word has a bigger difference than the rest of words for the 
+politics-focused outlets, than for the economics-focused outlets. Nonetheless, it is also
+clear that the words used by the all of these outlets remain similar. It is clear that the
+highlight in this period was around the US election and the pandemic. Also noteworthy is the
+fact that FT and the WSJ use 'covid' more often than 'coronavirus', in contrast to the NYT
+and the WP.
+"
+
+### word frequencies as proportion
+frequency_eco <- tw_words %>%
+  filter(!name %in% c("The New York Times", "The Washington Post")) %>%
+  count(name, words) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  gather(name, proportion, 'The Wall Street Journal')
+
+ggplot(frequency_eco, aes(proportion, `Financial Times`, color = abs(`Financial Times` - proportion))) +
+  geom_abline(color = "black") +
+  geom_jitter(color = "darkgreen", alpha = 0.1, size = 3, width = 0.3, height = 0.3, show.legend = FALSE) + # 
+  geom_text(aes(label = words), check_overlap = TRUE, vjust = 1.5) + 
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001),
+                       low = "darkgreen", high = "black") +
+  theme(legend.position = "none")
+
+frequency_eco %>%
+  arrange(desc(proportion))
 
 ### timeline
 tw_media %>%
@@ -192,7 +261,10 @@ tw_media %>%
   geom_line(size = 1) +
   scale_y_continuous(labels = percent_format(accuracy = 0.01)) +
   xlab("Hour") +
-  ylab("%")
+  ylab("%") +
+  theme_light() +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
 
 ### lenght and number of words
 # length of tweet
@@ -200,21 +272,28 @@ tw_media %>%
   mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
   mutate(length = nchar(text)) %>%
   ggplot(aes(x=name, y=length, fill = name)) +
-  geom_boxplot(show.legend = FALSE)
+  geom_boxplot(show.legend = FALSE) +
+  ggtitle("Tweet length") +
+  xlab("") +
+  ylab("Length") +
+  theme_light()
 
+"In terms of lenght, the NYT has a higher median than the rest of outlets. The WP has the lowest median
+and a group of outliers at both ends of the distribution."
 
-test <- tw_media %>%
-  #filter(is_retweet == FALSE) %>% 
-  filter(name == "Financial Times") %>%
-  select(-geo_coords, -favorite_count, -retweet_count) %>%
-  #mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
+#distribution accordng status_id
+tw_media %>%
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
   mutate(length = nchar(text)) %>%
-  arrange(desc(display_text_width)) %>%
-  #group_by(name) %>%
+  #arrange(desc(display_text_width)) %>%
   ggplot(aes(x=status_id, y=length)) +
-  #geom_histogram()
-  geom_bar(stat = 'identity')
-  #geom_boxplot(aes(name, length, fill = name))
+  geom_bar(stat = 'identity') +
+  facet_wrap(.~name, ncol = 1, scales = "free_x")
+  
+
+
+
+
 
 
 
