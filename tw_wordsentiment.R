@@ -96,6 +96,7 @@ tw_words <- tw_media %>%
   mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
   unnest_tokens(words, text, token = "regex", pattern = reg) %>% #pattern here says: tokenize everything that is in reg
   filter(!words %in% stop_words$word, #word not in stop_words
+         !str_detect(words, "^000"),
          str_detect(words, "[a-z]"))
 
 # 10 most common words
@@ -162,6 +163,7 @@ and the WP.
 "
 
 ### word frequencies as proportion
+# Business-focused
 frequency_eco <- tw_words %>%
   filter(!name %in% c("The New York Times", "The Washington Post")) %>%
   count(name, words) %>%
@@ -171,18 +173,67 @@ frequency_eco <- tw_words %>%
   spread(name, proportion) %>%
   gather(name, proportion, 'The Wall Street Journal')
 
-ggplot(frequency_eco, aes(proportion, `Financial Times`, color = abs(`Financial Times` - proportion))) +
+frequency_eco %>%
+  filter(proportion > 0.00025,
+         `Financial Times` > 0.00025) %>%
+  ggplot(aes(proportion, `Financial Times`, color = abs(`Financial Times` - proportion))) +
   geom_abline(color = "black") +
-  geom_jitter(color = "darkgreen", alpha = 0.1, size = 3, width = 0.3, height = 0.3, show.legend = FALSE) + # 
-  geom_text(aes(label = words), check_overlap = TRUE, vjust = 1.5) + 
+  #geom_jitter(color = "darkgreen", alpha = 0.1, size = 3, width = 0.3, height = 0.3, show.legend = FALSE) + 
+  #geom_text(aes(label = words), check_overlap = TRUE, vjust = 1.5) +
+  geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 0.001),
-                       low = "darkgreen", high = "black") +
-  theme(legend.position = "none")
+                       low = "black", high = "black") +
+  theme_light() 
+  #theme(legend.position = "none")
 
-frequency_eco %>%
-  arrange(desc(proportion))
+# Politics-focused
+frequency_pol <- tw_words %>%
+  filter(name %in% c("The New York Times", "The Washington Post")) %>%
+  count(name, words) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  gather(name, proportion, 'The Washington Post')
+
+frequency_pol %>%
+  filter(proportion > 0.00025,
+         `The New York Times` > 0.00025) %>%
+  ggplot(aes(proportion, `The New York Times`, color = abs(`The New York Times` - proportion))) +
+  geom_abline(color = "black") +
+  geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 0.001),
+                       low = "black", high = "black") +
+  theme_light()
+
+# Total
+frequency_total <- tw_words %>%
+  count(name, words) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  gather(name_eco, proportion_eco, c('Financial Times','The Wall Street Journal')) %>%
+  gather(name_pol, proportion_pol, c('The New York Times', 'The Washington Post'))
+
+frequency_total %>%
+  #filter(proportion_eco > 0.00025,
+  #       proportion_pol > 0.00025) %>%
+  ggplot(aes(proportion_eco, proportion_pol, color = abs(proportion_eco - proportion_pol))) +
+  geom_abline(color = "black") +
+  geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
+  scale_x_log10(labels = percent_format()) +
+  scale_y_log10(labels = percent_format()) +
+  scale_color_gradient(limits = c(0, 1), #check this scale
+                       low = "black", high = "black") +
+  facet_wrap(name_eco~name_pol)
 
 ### timeline
 tw_media %>%
