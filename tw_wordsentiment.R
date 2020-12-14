@@ -170,24 +170,32 @@ frequency_eco <- tw_words %>%
   group_by(name) %>%
   mutate(proportion = n/sum(n)) %>%
   select(-n) %>%
-  spread(name, proportion) %>%
-  gather(name, proportion, 'The Wall Street Journal')
+  spread(name, proportion)
 
 frequency_eco %>%
-  filter(proportion > 0.00025,
+  filter(`The Wall Street Journal` > 0.00025,
          `Financial Times` > 0.00025) %>%
-  ggplot(aes(proportion, `Financial Times`, color = abs(`Financial Times` - proportion))) +
+  ggplot(aes(`The Wall Street Journal`, `Financial Times`, color = abs(`Financial Times` - `The Wall Street Journal`))) +
   geom_abline(color = "black") +
-  #geom_jitter(color = "darkgreen", alpha = 0.1, size = 3, width = 0.3, height = 0.3, show.legend = FALSE) + 
-  #geom_text(aes(label = words), check_overlap = TRUE, vjust = 1.5) +
+  #est' raznaya versiya
   geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
   geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(limits = c(0, 0.001),
-                       low = "black", high = "black") +
-  theme_light() 
-  #theme(legend.position = "none")
+  scale_color_gradient(low = "black", high = "red") +
+  ggtitle("Nuzhno titel'") +
+  #xlab("The Wall Street Journal") +
+  #ylab("Financial Times") +
+  theme_light()
+
+"
+This plot shows the correlation between frequent words in FT and WSJ. Words such as 'trump', 'covid', 'coronavirus'
+are the most frequent words and equally used in both timelines. The word 'president' is more used in WSJ, whereas
+'donald' appears more frequently in FT. Moreover, it is possible to identify clusters of words in both outlets that
+point to specific topics being covered more in one outlet than in other. For instance, the words 'amy', 'barrett', 
+'supreme' and 'court' appear more often in WSJ. Words like 'china', 'chinese', 'beijing' and 'asia' are more likely
+to appear in FT than in WSJ.
+"
 
 # Politics-focused
 frequency_pol <- tw_words %>%
@@ -196,21 +204,26 @@ frequency_pol <- tw_words %>%
   group_by(name) %>%
   mutate(proportion = n/sum(n)) %>%
   select(-n) %>%
-  spread(name, proportion) %>%
-  gather(name, proportion, 'The Washington Post')
+  spread(name, proportion)
 
 frequency_pol %>%
-  filter(proportion > 0.00025,
+  filter(`The Washington Post` > 0.00025,
          `The New York Times` > 0.00025) %>%
-  ggplot(aes(proportion, `The New York Times`, color = abs(`The New York Times` - proportion))) +
+  ggplot(aes(`The Washington Post`, `The New York Times`, color = abs(`The New York Times` - `The Washington Post`))) +
   geom_abline(color = "black") +
   geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
   geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(limits = c(0, 0.001),
-                       low = "black", high = "black") +
+  scale_color_gradient(low = "black", high = "red") +
+  ggtitle("Nuzhno titel'") +
   theme_light()
+
+"
+In the case of politics-focused media outlets, the correlation is visually less spread out than in the
+previous case. There are few noticeable clusters of outliers, since most words are close to the reference
+line. The word that stands out is 'trump' with a higher proportion appearing in the WP, than in the NYT.
+"
 
 # Total
 frequency_total <- tw_words %>%
@@ -220,20 +233,46 @@ frequency_total <- tw_words %>%
   select(-n) %>%
   spread(name, proportion) %>%
   gather(name_eco, proportion_eco, c('Financial Times','The Wall Street Journal')) %>%
-  gather(name_pol, proportion_pol, c('The New York Times', 'The Washington Post'))
+  gather(name_pol, proportion_pol, c('The New York Times', 'The Washington Post')) 
+
+cor.test()
+
+cor.test(data = frequency_eco[frequency_eco$name == "The Wall Street Journal",], #without data doesn't work
+         ~ proportion + `Financial Times`)
+cor.test(data = frequency_pol[frequency_pol$name == "The Washington Post",],
+         ~ proportion + `The New York Times`)
+# Financial Times ~ The New York Times
+cor.test(data = frequency_total[frequency_total$name_eco == "Financial Times" & frequency_total$name_pol == "The New York Times",],
+         ~ proportion_eco + proportion_pol)
+
+# Financial Times ~ The Washington Post
+cor.test(data = frequency_total[frequency_total$name_eco == "Financial Times" & frequency_total$name_pol == "The Washington Post",],
+         ~ proportion_eco + proportion_pol)
+
+# The Wall Street Journal ~ The New York Times
+cor.test(data = frequency_total[frequency_total$name_eco == "The Wall Street Journal" & frequency_total$name_pol == "The New York Times",],
+         ~ proportion_eco + proportion_pol)
+
+# The Wall Street Journal ~ The Washington Post
+cor.test(data = frequency_total[frequency_total$name_eco == "The Wall Street Journal" & frequency_total$name_pol == "The Washington Post",],
+         ~ proportion_eco + proportion_pol)
+
 
 frequency_total %>%
-  #filter(proportion_eco > 0.00025,
-  #       proportion_pol > 0.00025) %>%
+  # filter(!is.na(proportion_eco),
+  #        !is.na(proportion_pol)) %>%
+  filter(proportion_eco > 0.00010,
+         proportion_pol > 0.00010) %>%
   ggplot(aes(proportion_eco, proportion_pol, color = abs(proportion_eco - proportion_pol))) +
   geom_abline(color = "black") +
-  geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_point(color = "red", alpha = 0.1, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
   geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(limits = c(0, 1), #check this scale
                        low = "black", high = "black") +
-  facet_wrap(name_eco~name_pol)
+  facet_grid(name_eco~name_pol)
+  
 
 ### timeline
 tw_media %>%
