@@ -65,7 +65,7 @@ tw_media %>%
 "
 The defined time period will cover tweets from 2020-09-21 until 2020-10-26.
 "
-### Lexicon-based sentiment analyisis
+### Lexicon-based sentiment analysis
 # checking for retweets
 tw_media %>%
   group_by(name, is_retweet) %>%
