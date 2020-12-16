@@ -4,10 +4,12 @@ library(rtweet)
 library(tidyverse)
 library(tidytext) #tokenize
 library(stopwords)
+theme_set(theme_light())
 
 library(scales) #for scales in graphs
 # library(reactable) #for tables
 library(lubridate) #for dates
+library(corrplot)
 # library(textdata) #to get dictionaries for sentiment analysis
 # library(wordcloud2) #for wordcloud
 # library(wordcloud) #for comparison cloud
@@ -108,8 +110,8 @@ tw_words %>%
   geom_bar(stat = "identity", fill = "red", alpha = 0.6) +
   ggtitle("Ten most common words") +
   xlab("Words") +
-  ylab("n") +
-  theme_light()
+  ylab("n")
+
 "
 The first word  appears almost two times more than the second most common word. At first glance, it looks
 like all the words relate between one another, with two distinguishable topics: US election and the pandemic.
@@ -128,8 +130,7 @@ tw_words %>%
   geom_text(aes(y = unique_words, label = unique_words), nudge_y = -1000) +
   ggtitle('Number of total and unique words in tweets') +
   xlab('') +
-  ylab('Word count') +
-  theme_light()
+  ylab('Word count')
 
 "
 With the exception of FT, all outlets have around 3200 tweets. The NYT is the one with the most 
@@ -149,8 +150,7 @@ tw_words %>%
   facet_wrap(. ~ name, scales = "free") +
   ggtitle('Most frequent used word by media outlet') +
   ylab('Word count') +
-  xlab('Words') +
-  theme_light()
+  xlab('Words')
   
 "
 For these four newspapers, the most used word in this period is 'trump', although it is 
@@ -183,10 +183,7 @@ frequency_eco %>%
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(low = "black", high = "red") +
-  ggtitle("Nuzhno titel'") +
-  #xlab("The Wall Street Journal") +
-  #ylab("Financial Times") +
-  theme_light()
+  ggtitle("Nuzhno titel'")
 
 "
 This plot shows the correlation between frequent words in FT and WSJ. Words such as 'trump', 'covid', 'coronavirus'
@@ -216,8 +213,7 @@ frequency_pol %>%
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
   scale_color_gradient(low = "black", high = "red") +
-  ggtitle("Nuzhno titel'") +
-  theme_light()
+  ggtitle("Nuzhno titel'")
 
 "
 In the case of politics-focused media outlets, the correlation is visually less spread out than in the
@@ -233,46 +229,36 @@ frequency_total <- tw_words %>%
   select(-n) %>%
   spread(name, proportion) %>%
   gather(name_eco, proportion_eco, c('Financial Times','The Wall Street Journal')) %>%
-  gather(name_pol, proportion_pol, c('The New York Times', 'The Washington Post')) 
-
-cor.test()
-
-cor.test(data = frequency_eco[frequency_eco$name == "The Wall Street Journal",], #without data doesn't work
-         ~ proportion + `Financial Times`)
-cor.test(data = frequency_pol[frequency_pol$name == "The Washington Post",],
-         ~ proportion + `The New York Times`)
-# Financial Times ~ The New York Times
-cor.test(data = frequency_total[frequency_total$name_eco == "Financial Times" & frequency_total$name_pol == "The New York Times",],
-         ~ proportion_eco + proportion_pol)
-
-# Financial Times ~ The Washington Post
-cor.test(data = frequency_total[frequency_total$name_eco == "Financial Times" & frequency_total$name_pol == "The Washington Post",],
-         ~ proportion_eco + proportion_pol)
-
-# The Wall Street Journal ~ The New York Times
-cor.test(data = frequency_total[frequency_total$name_eco == "The Wall Street Journal" & frequency_total$name_pol == "The New York Times",],
-         ~ proportion_eco + proportion_pol)
-
-# The Wall Street Journal ~ The Washington Post
-cor.test(data = frequency_total[frequency_total$name_eco == "The Wall Street Journal" & frequency_total$name_pol == "The Washington Post",],
-         ~ proportion_eco + proportion_pol)
-
+  gather(name_pol, proportion_pol, c('The New York Times', 'The Washington Post'))
 
 frequency_total %>%
-  # filter(!is.na(proportion_eco),
-  #        !is.na(proportion_pol)) %>%
-  filter(proportion_eco > 0.00010,
-         proportion_pol > 0.00010) %>%
+  filter(proportion_eco > 0.00025,
+         proportion_pol > 0.00025) %>%
   ggplot(aes(proportion_eco, proportion_pol, color = abs(proportion_eco - proportion_pol))) +
   geom_abline(color = "black") +
-  geom_point(color = "red", alpha = 0.1, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
-  geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
+  geom_point(color = "red", alpha = 0.3, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_text(data = subset(frequency_total, proportion_eco >= 0.001 & proportion_pol >= 0.0005),
+    aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) +
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(limits = c(0, 1), #check this scale
-                       low = "black", high = "black") +
-  facet_grid(name_eco~name_pol)
-  
+  scale_color_gradient(low = "gray65", high = "black") +
+  ggtitle("Nuzhno titel'") +
+  xlab("Business-focused") +
+  ylab("Politics-focused") +
+  facet_grid(name_eco ~ name_pol)
+
+corr_media <- tw_words %>%
+  count(name, words) %>%
+  group_by(name) %>%
+  mutate(proportion = n/sum(n)) %>%
+  select(-n) %>%
+  spread(name, proportion) %>%
+  drop_na() %>%
+  select(-words) %>%
+  cor()
+
+corrplot(corr_media, method = "number", type = "upper", 
+         col = colorRampPalette(c("black", "black", "black", "white", "darkgreen"))(20), cl.lim = c(0.5, 1)) 
 
 ### timeline
 tw_media %>%
@@ -286,8 +272,8 @@ tw_media %>%
   ggtitle("Frequency of tweets by day") +
   xlab("Date") +
   ylab("Count") +
-  facet_wrap(.~ name, ncol = 1) +
-  theme_light()
+  facet_wrap(.~ name, ncol = 1)
+
 "
 As for the frequency, it looks like the outlets all share an almost uniform distribution with some
 exceptions (fridays). The darker areas represent the weekends with fewer tweets in comparison to weekdays.
@@ -305,7 +291,6 @@ tw_media %>%
   ggtitle("Frequency of tweets by day") +
   xlab("Date") +
   ylab("Count") +
-  theme_light() +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
@@ -329,8 +314,7 @@ tw_media %>%
   ggtitle("Time of the day for tweets (EST)") +
   xlab("Hour") +
   ylab("Count") +
-  facet_wrap(. ~ name, ncol = 1) +
-  theme_light()
+  facet_wrap(. ~ name, ncol = 1)
 
 "
 For The New Yortk Times and The Washington Post is easier to distinguish the time of
@@ -352,7 +336,6 @@ tw_media %>%
   scale_y_continuous(labels = percent_format(accuracy = 0.01)) +
   xlab("Hour") +
   ylab("%") +
-  theme_light() +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
@@ -365,8 +348,7 @@ tw_media %>%
   geom_boxplot(show.legend = FALSE) +
   ggtitle("Tweet length") +
   xlab("") +
-  ylab("Length") +
-  theme_light()
+  ylab("Length")
 
 "In terms of lenght, the NYT has a higher median than the rest of outlets. The WP has the lowest median
 and a group of outliers at both ends of the distribution."
@@ -378,7 +360,13 @@ tw_media %>%
   #arrange(desc(display_text_width)) %>%
   ggplot(aes(x=status_id, y=length)) +
   geom_bar(stat = 'identity') +
-  facet_wrap(.~name, ncol = 1, scales = "free_x")
+  ggtitle("Length of tweets in timeline") +
+  xlab("Tweets") +
+  ylab("Length") +
+  facet_wrap(.~name, ncol = 1, scales = "free_x") +
+  theme(panel.background = element_rect(fill = "white"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank())
   
 
 
