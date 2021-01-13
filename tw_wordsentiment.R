@@ -2,9 +2,12 @@
 
 library(rtweet)
 library(tidyverse)
+#library(RColorBrewer)
 library(tidytext) #tokenize
 library(stopwords)
 theme_set(theme_light())
+color1 <- c("#EC7063", "#5DADE2", "#58D68D", "#AF7AC5")
+  #c("#CB4335", "#2E86C1", "#28B463", "#884EA0")
 
 library(scales) #for scales in graphs
 # library(reactable) #for tables
@@ -23,22 +26,23 @@ tw_original %>%
   summarize(n = n())
 "
 Considering the most popular media outlets in the US, I randomly picked five major newspapers to compare
-how different their timelines in Twitter is from one another. Financial Times is London-based, however
+how different their timelines in Twitter are from one another. Financial Times is London-based, however
 it usually gives a large coverage of news related to the US. Moreover, the idea is to find how different
-is the content of the timelines from newspapers, which are known for their political reporting, from the 
-ones that are known for their focus on business and economy. In this sense, I decided to classify these
-newspapers based on my own impression about the focus of each media outlet. Therefore, 'The New York Times' 
-and 'The Washington Post' are considered as the politics-focused, whereas 'Financial Times' and
-'The Wall Street Journal' are business-focused.
+is the content of the timelines from two groups of newspapers: the ones, which are known for their political 
+reporting, from the ones that are known for their focus on business and economy. In this sense, I decided 
+to classify these newspapers based on my own impression about the focus of each media outlet. Therefore, 
+'The New York Times' and 'The Washington Post' are considered as the politics-focused, whereas 'Financial Times' 
+and 'The Wall Street Journal' are business-focused.
 "
 
-# Filtering tweets and defining time period
+# Filtering tweets and variables 
 tw_media <- tw_original %>%
   mutate(date = as_datetime(created_at)) %>%
   filter(lang == "en") %>%
   select(name, date, text, source, is_retweet, favorite_count, #201210
          retweet_count, lang, geo_coords, status_id)
-  
+
+# Defining time period
 tw_media %>%
   group_by(name) %>%
   mutate(n = n(),
@@ -48,25 +52,24 @@ tw_media %>%
   unique()
 
 "
-Initially, I also considered to use the timeline from Bloomberg, but decided to exclude it from the analysis
+Initially, I also wanted to use the timeline from Bloomberg, but decided to exclude it from the analysis
 after checking the timeline period of their tweets. It appears that the frequency of new tweets is higher in 
 comparison to the rest of newspapers. This implies that the retrieved tweets from Bloomberg only cover a 
 little less than two weeks, whereas the rest of newspapers go over a month. Therefore, I decided to remove 
 those tweets. I also limited the time period to go from the first tweet of the Wall Street Journal timeline to
 the date these tweets were retrieved. It is important to consider that the defined period will not cover the 
 timeline from The Washington Post by almost a day and The New York Times by more than three days.
+The defined time period will cover tweets from 2020-09-21 until 2020-10-26.
 "  
 tw_media <- tw_media %>%
   filter(name != 'Bloomberg',
          date >= min(date[which(name == "The Wall Street Journal")])) #zdes' mozhno videt' kak rabotayet s drugimi variantami
 
+# Number of tweets for each outlet
 tw_media %>%
   group_by(name) %>%
   summarise(n = n())
 
-"
-The defined time period will cover tweets from 2020-09-21 until 2020-10-26.
-"
 ### Lexicon-based sentiment analysis
 # checking for retweets
 tw_media %>%
@@ -81,7 +84,7 @@ same reports several times, but are not marked as retweets.
 "
 "
 There are some things that should be considered in this part. I didn't exclude
-retweets as I plant to see the timeline as a whole. Usually, a tweet that starts with ' are deleted, because
+retweets as I plan to see the timeline as a whole. Usually, a tweet that starts with ' are deleted, because
 they are considered retweets. However, some tweets start with a quote and they are not necessarily a retweet.
 "
 # getting tokens (words)
@@ -90,7 +93,12 @@ they are considered retweets. However, some tweets start with a quote and they a
 #^' --> to check if ' at the beginning of a tweet
 #reg <- ([^A-Za-z\\d#@\\-']|'(?![A-Za-z\\d])|^'|'s)
 #reg <- "([^A-Za-z\\d#@']|'(\\w{2})|'(\\s|$)|'s)"
-reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d])|'s|^'|(?<=\\s)')"
+
+#regex erases everything that is NOT a letter, number, hashtag, @ or quote(')
+#OR quote(') if it comes after a letter or number - to delete last quote in word or sentence
+#OR 's
+#OR quote(') after a whitespace 145306 without, 145264
+reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d])|'s|(?<=\\s)')" 
 
 tw_words <- tw_media %>%
   #filter(is_retweet == FALSE) %>% #checking for retweets
@@ -107,7 +115,7 @@ tw_words %>%
   arrange(desc(n)) %>%
   top_n(10) %>%
   ggplot(aes(reorder(words,n), n)) +
-  geom_bar(stat = "identity", fill = "red", alpha = 0.6) +
+  geom_bar(stat = "identity", fill = "red", alpha = 0.6) + 
   ggtitle("Ten most common words") +
   xlab("Words") +
   ylab("n")
@@ -129,13 +137,13 @@ tw_words %>%
   geom_text(aes(label = total_words), nudge_y = -1000) +
   geom_text(aes(y = unique_words, label = unique_words), nudge_y = -1000) +
   ggtitle('Number of total and unique words in tweets') +
+  scale_fill_manual(values = color1) +
   xlab('') +
   ylab('Word count')
 
 "
-With the exception of FT, all outlets have around 3200 tweets. The NYT is the one with the most 
-words followed by the WSJ. The darker color shows the numnber of unique words used in each timeline
-At this level, there is less variability than in the count for total words.
+The NYT is the one with the most words followed by the WSJ. The darker color shows the numnber of unique 
+words used in each timeline At this level, there is less variability than in the count for total words.
 "
 
 # more used words by media
@@ -149,6 +157,7 @@ tw_words %>%
   coord_flip() +
   facet_wrap(. ~ name, scales = "free") +
   ggtitle('Most frequent used word by media outlet') +
+  scale_fill_manual(values = color1) +
   ylab('Word count') +
   xlab('Words')
   
@@ -178,15 +187,16 @@ frequency_eco %>%
   ggplot(aes(`The Wall Street Journal`, `Financial Times`, color = abs(`Financial Times` - `The Wall Street Journal`))) +
   geom_abline(color = "black") +
   #est' raznaya versiya
-  geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_point(color = "#D35400", alpha = 0.25, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
   geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(low = "black", high = "red") +
-  ggtitle("Nuzhno titel'")
+  #scale_color_gradient(low = "black", high = "red") +
+  scale_color_gradient(low = "#17202A", high = "#5D6D7E") +
+  ggtitle("Word frequencies - Business")
 
 "
-This plot shows the correlation between frequent words in FT and WSJ. Words such as 'trump', 'covid', 'coronavirus'
+This plot shows the correlation between word frequencies in FT and WSJ. Words such as 'trump', 'covid', 'coronavirus'
 are the most frequent words and equally used in both timelines. The word 'president' is more used in WSJ, whereas
 'donald' appears more frequently in FT. Moreover, it is possible to identify clusters of words in both outlets that
 point to specific topics being covered more in one outlet than in other. For instance, the words 'amy', 'barrett', 
@@ -208,12 +218,13 @@ frequency_pol %>%
          `The New York Times` > 0.00025) %>%
   ggplot(aes(`The Washington Post`, `The New York Times`, color = abs(`The New York Times` - `The Washington Post`))) +
   geom_abline(color = "black") +
-  geom_point(color = "red", alpha = 0.2, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_point(color = "#D35400", alpha = 0.25, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
   geom_text(aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) + 
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(low = "black", high = "red") +
-  ggtitle("Nuzhno titel'")
+  #scale_color_gradient(low = "black", high = "red") +
+  scale_color_gradient(low = "#17202A", high = "#5D6D7E") +
+  ggtitle("Word frequencies - Politics")
 
 "
 In the case of politics-focused media outlets, the correlation is visually less spread out than in the
@@ -236,16 +247,24 @@ frequency_total %>%
          proportion_pol > 0.00025) %>%
   ggplot(aes(proportion_eco, proportion_pol, color = abs(proportion_eco - proportion_pol))) +
   geom_abline(color = "black") +
-  geom_point(color = "red", alpha = 0.3, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
-  geom_text(data = subset(frequency_total, proportion_eco >= 0.001 & proportion_pol >= 0.0005),
+  geom_point(color = "#D35400", alpha = 0.25, size = 3, position = position_jitter(seed = 1), show.legend = FALSE) +
+  geom_text(data = subset(frequency_total, proportion_eco >= 0.0005 & proportion_pol >= 0.0005), #0.001 - 0.0005
     aes(label = words), check_overlap = TRUE, position = position_jitter(seed = 1), vjust = 1.5, show.legend = FALSE) +
   scale_x_log10(labels = percent_format()) +
   scale_y_log10(labels = percent_format()) +
-  scale_color_gradient(low = "gray65", high = "black") +
-  ggtitle("Nuzhno titel'") +
+  #scale_color_gradient(low = "gray65", high = "black") +
+  scale_color_gradient(low = "#17202A", high = "#5D6D7E") +
+  ggtitle("Word frequencies - Business & Politics") +
   xlab("Business-focused") +
   ylab("Politics-focused") +
   facet_grid(name_eco ~ name_pol)
+
+"
+When comparing between the two groups of media outlets the word 'trump' and words related to the pandemic are the most common
+in terms of frequency. Visually, it appears that the frequency of words is more spread out when comparing the WP to the two 
+business-focused outlets, especially with FT. This would point out the different coverage in topics. However, it appears that 
+there is a close correlation between the NYT and the WSJ. 
+"
 
 corr_media <- tw_words %>%
   count(name, words) %>%
@@ -260,6 +279,12 @@ corr_media <- tw_words %>%
 corrplot(corr_media, method = "number", type = "upper", 
          col = colorRampPalette(c("black", "black", "black", "white", "darkgreen"))(20), cl.lim = c(0.5, 1)) 
 
+"
+A correlation matrix of word frequencies shows that the NYT and WSJ are the most similar media outlets from this sample
+of tweets. The politics-focused outlets have a 0.77 (), whereas the business-focused have a 0.79. The rest of cases are
+under 0.70.
+"
+
 ### timeline
 tw_media %>%
   #filter(is_retweet == FALSE) %>%
@@ -272,6 +297,7 @@ tw_media %>%
   ggtitle("Frequency of tweets by day") +
   xlab("Date") +
   ylab("Count") +
+  scale_fill_manual(values = color1) +
   facet_wrap(.~ name, ncol = 1)
 
 "
