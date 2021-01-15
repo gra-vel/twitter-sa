@@ -113,7 +113,7 @@ tw_words <- tw_media %>%
 tw_words %>%
   count(words) %>%
   arrange(desc(n)) %>%
-  top_n(10) %>%
+  top_n(10, n) %>%
   ggplot(aes(reorder(words,n), n)) +
   geom_bar(stat = "identity", fill = "red", alpha = 0.6) + 
   ggtitle("Ten most common words") +
@@ -397,38 +397,19 @@ tw_media %>%
 #distribution according status_id
 tw_media %>%
   mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;|(?<=)<(.*?)(?=>)>", "")) %>%
-  mutate(length = nchar(text)) %>%
-  #arrange(desc(display_text_width)) %>%
-  ggplot(aes(x=status_id, y=length, fill = length)) +
-  geom_bar(stat = 'identity') +
-  ggtitle("Length of tweets in timeline") +
-  xlab("Tweets") +
-  ylab("Length") +
-  scale_fill_gradient(low = "yellow", high = "blue") +
-  facet_wrap(.~name, ncol = 1, scales = "free_x") +
-  theme(panel.background = element_rect(fill = "white"),
-        axis.ticks.x = element_blank(),
-        axis.text.x = element_blank())
-  
-tw_media %>%
-  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;|(?<=)<(.*?)(?=>)>", "")) %>%
   mutate(length = nchar(text),
-         date2 = date(with_tz(date, 'EST')),
+         date_simp = date(with_tz(date, 'EST')),
          hour = hour(with_tz(date, 'EST'))) %>%
-  group_by(name, date2, hour) %>%
+  group_by(name, date_simp, hour) %>%
   mutate(length_hour = mean(length),
-         date = paste(date2,hour, sep = "-")) %>%
-  select(name, date, date2, hour, length_hour) %>% unique() %>%
-  #count(name, hour = hour(with_tz(date, 'EST'))) %>%
-  #arrange(desc(display_text_width)) %>%
-  #ggplot(aes(x=status_id, y=length)) +
+         date = paste(date_simp,hour, sep = "-")) %>%
+  select(name, date, date_simp, hour, length_hour) %>% unique() %>%
   ggplot(aes(x=date, y=length_hour, fill = length_hour)) +
   geom_bar(stat = 'identity') +
-  ggtitle("Length of tweets in timeline") +
-  xlab("Tweets") +
-  ylab("Length") +
+  ggtitle("Average length of tweets per hour") +
+  xlab("Hours") +
+  ylab("Average length") +
   scale_fill_gradient(low = "yellow", high = "blue") +
-  #facet_wrap(.~name, ncol = 1, scales = "free_x") +
   facet_wrap(.~name, ncol = 1) +
   theme(panel.background = element_rect(fill = "white"),
         axis.ticks.x = element_blank(),
