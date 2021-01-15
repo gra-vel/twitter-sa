@@ -10,7 +10,7 @@ color1 <- c("#EC7063", "#5DADE2", "#58D68D", "#AF7AC5")
   #c("#CB4335", "#2E86C1", "#28B463", "#884EA0")
 
 library(scales) #for scales in graphs
-# library(reactable) #for tables
+library(reactable) #for tables
 library(lubridate) #for dates
 library(corrplot)
 # library(textdata) #to get dictionaries for sentiment analysis
@@ -146,7 +146,7 @@ The NYT is the one with the most words followed by the WSJ. The darker color sho
 words used in each timeline At this level, there is less variability than in the count for total words.
 "
 
-# more used words by media
+# most used words by media
 tw_words %>% 
   group_by(name) %>%
   count(words) %>%
@@ -292,7 +292,8 @@ tw_media %>%
   geom_histogram(position = 'identity', binwidth = 1, show.legend = FALSE, alpha = 0.65) +
   geom_histogram(data = subset(tw_media %>%
                                  #filter(is_retweet == FALSE) %>%
-                                 mutate(wknds = wday(date)), wknds==7 | wknds==1), 
+                                 mutate(wknds = wday(date)), 
+                               wknds==7 | wknds==1), # Saturday and Sunday
                  binwidth = 1, alpha = 0.99, show.legend = FALSE) +
   ggtitle("Frequency of tweets by day") +
   xlab("Date") +
@@ -317,13 +318,14 @@ tw_media %>%
   ggtitle("Frequency of tweets by day") +
   xlab("Date") +
   ylab("Count") +
+  scale_color_manual(values = color1) +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
 "
 Visually, it looks like the two politics-focused media outlets have a higher
 average rate of tweets on weekdays than the business-focused outlets. This 
-difference is more evident towards the end of the week
+difference is more evident towards the end of the week. 
 "
 ### daytime
 tw_media %>%
@@ -340,6 +342,7 @@ tw_media %>%
   ggtitle("Time of the day for tweets (EST)") +
   xlab("Hour") +
   ylab("Count") +
+  scale_fill_manual(values = color1) +
   facet_wrap(. ~ name, ncol = 1)
 
 "
@@ -362,13 +365,14 @@ tw_media %>%
   scale_y_continuous(labels = percent_format(accuracy = 0.01)) +
   xlab("Hour") +
   ylab("%") +
+  scale_color_manual(values = color1) +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
 ### lenght and number of words
 # length of tweet
 tw_media %>%
-  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;|(?<=)<(.*?)(?=>)>", "")) %>% #removes url and emojis
   mutate(length = nchar(text)) %>%
   ggplot(aes(x=name, y=length, fill = name)) +
   geom_boxplot(show.legend = FALSE) +
@@ -377,24 +381,58 @@ tw_media %>%
   ylab("Length")
 
 "In terms of lenght, the NYT has a higher median than the rest of outlets. The WP has the lowest median
-and a group of outliers at both ends of the distribution."
+and a group of outliers at both ends of the distribution. As most of those outliers are on the higher end
+of the distribution I checked a random sample of tweets with more than 150 characters to see if there is 
+any reason as to why they are longer than average. It doesn't appear to be a clear trend other than these
+tweets sometimes are quoting an individual."
 
-#distribution accordng status_id
 tw_media %>%
-  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>%
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;|(?<=)<(.*?)(?=>)>", "")) %>%
+  mutate(length = nchar(text)) %>%
+  filter(length > 150 & name == "The Washington Post") %>%
+  select(date, text, length) %>%
+  sample_n(20, seed = 1) %>%
+  reactable()
+
+#distribution according status_id
+tw_media %>%
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;|(?<=)<(.*?)(?=>)>", "")) %>%
   mutate(length = nchar(text)) %>%
   #arrange(desc(display_text_width)) %>%
-  ggplot(aes(x=status_id, y=length)) +
+  ggplot(aes(x=status_id, y=length, fill = length)) +
   geom_bar(stat = 'identity') +
   ggtitle("Length of tweets in timeline") +
   xlab("Tweets") +
   ylab("Length") +
+  scale_fill_gradient(low = "yellow", high = "blue") +
   facet_wrap(.~name, ncol = 1, scales = "free_x") +
   theme(panel.background = element_rect(fill = "white"),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank())
   
-
+tw_media %>%
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;|(?<=)<(.*?)(?=>)>", "")) %>%
+  mutate(length = nchar(text),
+         date2 = date(with_tz(date, 'EST')),
+         hour = hour(with_tz(date, 'EST'))) %>%
+  group_by(name, date2, hour) %>%
+  mutate(length_hour = mean(length),
+         date = paste(date2,hour, sep = "-")) %>%
+  select(name, date, date2, hour, length_hour) %>% unique() %>%
+  #count(name, hour = hour(with_tz(date, 'EST'))) %>%
+  #arrange(desc(display_text_width)) %>%
+  #ggplot(aes(x=status_id, y=length)) +
+  ggplot(aes(x=date, y=length_hour, fill = length_hour)) +
+  geom_bar(stat = 'identity') +
+  ggtitle("Length of tweets in timeline") +
+  xlab("Tweets") +
+  ylab("Length") +
+  scale_fill_gradient(low = "yellow", high = "blue") +
+  #facet_wrap(.~name, ncol = 1, scales = "free_x") +
+  facet_wrap(.~name, ncol = 1) +
+  theme(panel.background = element_rect(fill = "white"),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank())
 
 
 
