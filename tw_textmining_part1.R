@@ -59,7 +59,7 @@ tw_media %>%
   group_by(name, is_retweet) %>%
   count()
 
-# getting tokens (words)
+# data cleaning
 reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d])|'s|(?<=\\s)')" #to filter words
 
 tw_words <- tw_media %>%
