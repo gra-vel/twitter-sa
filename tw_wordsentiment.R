@@ -13,13 +13,11 @@ library(scales) #for scales in graphs
 library(reactable) #for tables
 library(lubridate) #for dates
 library(corrplot)
-# library(textdata) #to get dictionaries for sentiment analysis
-# library(wordcloud2) #for wordcloud
-# library(wordcloud) #for comparison cloud
-# library(reshape2) #to change shape of df
+library(wordcloud2) #for wordcloud
 
 # Importing tweets
-tw_original <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/media.csv")
+#tw_original <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/media.csv")
+tw_original <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/21_media.csv")
 
 tw_original %>%
   group_by(name) %>%
@@ -56,14 +54,15 @@ Initially, I also wanted to use the timeline from Bloomberg, but decided to excl
 after checking the timeline period of their tweets. It appears that the frequency of new tweets is higher in 
 comparison to the rest of newspapers. This implies that the retrieved tweets from Bloomberg only cover a 
 little less than two weeks, whereas the rest of newspapers go over a month. Therefore, I decided to remove 
-those tweets. I also limited the time period to go from the first tweet of the Wall Street Journal timeline to
+those tweets. I also limited the time period to go from the first tweet of the New York Times timeline to
 the date these tweets were retrieved. It is important to consider that the defined period will not cover the 
-timeline from The Washington Post by almost a day and The New York Times by more than three days.
-The defined time period will cover tweets from 2020-09-21 until 2020-10-26.
+entire retrieved timeline from The Washington Post by more than 10 days and The Wall Street Journal by more than 
+five days.
+The defined time period will cover tweets from 2020-12-31 until 2021-02-01.
 "  
 tw_media <- tw_media %>%
   filter(name != 'Bloomberg',
-         date >= min(date[which(name == "The Wall Street Journal")])) #zdes' mozhno videt' kak rabotayet s drugimi variantami
+         date >= min(date[which(name == "The New York Times")])) #zdes' mozhno videt' kak rabotayet s drugimi variantami
 
 # Number of tweets for each outlet
 tw_media %>%
@@ -121,8 +120,13 @@ tw_words %>%
   ylab("n")
 
 "
+October2020
 The first word  appears almost two times more than the second most common word. At first glance, it looks
 like all the words relate between one another, with two distinguishable topics: US election and the pandemic.
+"
+"
+The three identifiable topics related to these words are the inauguration of the US president, the pandemic, the 
+storming of the US capitol
 "
 # number of total words
 tw_words %>%
@@ -142,8 +146,10 @@ tw_words %>%
   ylab('Word count')
 
 "
-The NYT is the one with the most words followed by the WSJ. The darker color shows the numnber of unique 
-words used in each timeline At this level, there is less variability than in the count for total words.
+The NYT is the one with the most words followed by the WSJ. The darker color shows the number of unique 
+words used in each timeline. At this level, there is more variability than in the count for total words???.
+However, it is important to consider that this variable is related to average length of the tweets for 
+each outlet.
 "
 
 # most used words by media
@@ -162,6 +168,7 @@ tw_words %>%
   xlab('Words')
   
 "
+October 2020
 For these four newspapers, the most used word in this period is 'trump', although it is 
 noticeable that this word has a bigger difference than the rest of words for the 
 politics-focused outlets, than for the economics-focused outlets. Nonetheless, it is also
@@ -169,6 +176,15 @@ clear that the words used by the all of these outlets remain similar. It is clea
 highlight in this period was around the US election and the pandemic. Also noteworthy is the
 fact that FT and the WSJ use 'covid' more often than 'coronavirus', in contrast to the NYT
 and the WP.
+"
+"
+January 2021
+Considering the most repeated words, the four outlets use almost the same words with different 
+frequency. A notable difference might be the Financial Times, where 'uk' and 'china' appear only
+in this newspaper among the most frequent words. It is also noticeable that there is less 
+variability in these words for the business-focused outlets, than for the politics-focused outlets.
+It seems that FT and the WSJ use 'covid' more often than 'coronavirus', in contrast to the NYT and 
+the WP, when referring to the pandemic.
 "
 
 ### word frequencies as proportion
@@ -196,11 +212,21 @@ frequency_eco %>%
   ggtitle("Word frequencies - Business")
 
 "
+October 2020
 This plot shows the correlation between word frequencies in FT and WSJ. Words such as 'trump', 'covid', 'coronavirus'
 are the most frequent words and equally used in both timelines. The word 'president' is more used in WSJ, whereas
 'donald' appears more frequently in FT. Moreover, it is possible to identify clusters of words in both outlets that
 point to specific topics being covered more in one outlet than in other. For instance, the words 'amy', 'barrett', 
 'supreme' and 'court' appear more often in WSJ. Words like 'china', 'chinese', 'beijing' and 'asia' are more likely
+to appear in FT than in WSJ.
+"
+"
+January 2021
+This plot shows the correlation between word frequencies in FT and WSJ. Words such as 'trump', 'covid', 'biden'
+are the most frequent words and similarly used in both timelines. The word 'president' is more used in WSJ, whereas
+'donald' appears more frequently in FT. Moreover, it is possible to identify clusters of words in both outlets that
+point to specific topics being covered more in one outlet than in other. For instance, the words 'gamestop', 'wall', 
+'street' and 'stock' appear more often in WSJ. Words like 'alexei', 'navalny', and 'europe' are more likely
 to appear in FT than in WSJ.
 "
 
@@ -265,7 +291,7 @@ in terms of frequency. Visually, it appears that the frequency of words is more 
 business-focused outlets, especially with FT. This would point out the different coverage in topics. However, it appears that 
 there is a close correlation between the NYT and the WSJ. 
 "
-
+# word correlation
 corr_media <- tw_words %>%
   count(name, words) %>%
   group_by(name) %>%
@@ -280,9 +306,9 @@ corrplot(corr_media, method = "number", type = "upper",
          col = colorRampPalette(c("black", "black", "black", "white", "darkgreen"))(20), cl.lim = c(0.5, 1)) 
 
 "
-A correlation matrix of word frequencies shows that the NYT and WSJ are the most similar media outlets from this sample
-of tweets. The politics-focused outlets have a 0.77 (), whereas the business-focused have a 0.79. The rest of cases are
-under 0.70.
+A correlation matrix of word frequencies shows that the NYT and WSJ are in fact the most similar media outlets from this 
+sample of tweets. The politics-focused outlets have a coefficient of 0.75, whereas the business-focused have a coefficient
+of 0.77. The rest of cases are under 0.70.
 "
 
 ### timeline
@@ -302,8 +328,8 @@ tw_media %>%
   facet_wrap(.~ name, ncol = 1)
 
 "
-As for the frequency, it looks like the outlets all share an almost uniform distribution with some
-exceptions (fridays). The darker areas represent the weekends with fewer tweets in comparison to weekdays.
+As for the tweets frequency, it looks like the outlets all share an almost uniform distribution with some
+exceptions. The darker areas represent the weekends with fewer tweets in comparison to weekdays.
 When removing retweets, the distribution remains the same, which suggests that retweets are more or less
 evenly distributed along the timeline.
 "
@@ -324,8 +350,7 @@ tw_media %>%
 
 "
 Visually, it looks like the two politics-focused media outlets have a higher
-average rate of tweets on weekdays than the business-focused outlets. This 
-difference is more evident towards the end of the week. 
+average rate of tweets on weekdays than the business-focused outlets.
 "
 ### daytime
 tw_media %>%
@@ -415,22 +440,30 @@ tw_media %>%
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank())
 
+### wordcloud
+tw_words %>%
+  rename(word = words) %>%
+  filter(!word %in% c('opinion','ft','edition','times','story','front','page',
+                      'read','writes','breaking','analysis','week',
+                      'york','#wsjwhatsnow', '@wsjopinion')) %>%
+  #filter(name == "The Washington Post") %>%
+  count(word, sort = TRUE) %>%
+  top_n(1000) %>%
+  wordcloud2(size = 1, shape = 'circle')
 
 
 
+#'thursday','tuesday','monday','friday','wednesday',
 
 
+#comparing sentiment in a wordcloud
+tw_words %>%
+  rename(word = words) %>%
+  inner_join(get_sentiments("bing")) %>%
+  filter(word != "trump") %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = color1,
+                   max.words = 100)
 
-?percent_format
 
-#marlon puerta
-
-
-tw_media %>%
-  select(name, date) %>%
-  filter(name == "The Wall Street Journal") %>%
-  arrange(desc(date))
-
-test <- tw_words %>%
-  filter(str_detect(word, '"')) %>%
-  arrange(desc(word))
