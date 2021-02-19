@@ -15,9 +15,22 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 ```
-### Text Mining using tweets
+## Text Mining and twitter
 
-This project is about...
+### Summary
+This project is my first attempt at text mining. Lately, I've been improving my knowledge of R and Python and wanted to start a project, using one of these two programming languages. I've decided to use R, since I feel more confident with some of its libraries. 
+
+I use a dataset that contains tweets for four major news outlets. I've retrieved this data from Twitter's API using the rtweet library from R. The project consists of a simple EDA and text mining to identify...
+
+For data wrangling, I use tools from dplyr, tidytext and lubridate. The analysis follows the first chapters of Text Mining with R from Julia Silge & David Robinson.
+
+### Introduction
+I'm usually reading newspapers from the US, mainly for the international news and economic analysis. It's evident that some news outlets are traditionally more focused on a specific topic, like politics or economics. The goal of this project is to visualize the similarities and differences between these news outlets.
+
+With the ever-growing role of social media, I decided to use Twitter data to analyze the timelines of the media outlets that I commonly use. 
+
+### Importing data
+
 ```{r}
 library(rtweet)
 library(tidyverse)
@@ -47,7 +60,12 @@ library(wordcloud2)
 
 # write_as_csv(tw_retrieve, "21_media.csv")
 
+dim(tw_original)
+names(tw_original)
+
 ```
+Aqui necesito mostrar todas las variables y elegir solo las q voy a necesitar. Después mostrar cuantas observaciones hay. También vale la pena indicar lo que va a pasar con los retweets.
+
 ```{r}
 ### Overview
 tw_original <- read_twitter_csv("C:/Users/G3/Documents/Gabriel/Profile/Projects/twitter-sa/21_media.csv")
