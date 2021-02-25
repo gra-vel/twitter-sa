@@ -27,7 +27,7 @@ For data wrangling, I use tools from dplyr, tidytext and lubridate. The analysis
 ### Introduction
 I'm usually reading newspapers from the US, mainly for the international news and economic analysis. It's evident that some news outlets are traditionally more focused on a specific topic, like politics or economics. The goal of this project is to visualize the similarities and differences between these news outlets.
 
-With the ever-growing role of social media, I decided to use Twitter data to analyze the timelines of the media outlets that I commonly use. 
+With the ever-growing role of social media, I decided to use data from the timeline of some media outlets that I commonly use in Twitter. 
 
 ### Importing data
 
