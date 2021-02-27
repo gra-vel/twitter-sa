@@ -2,26 +2,27 @@ library(rtweet)
 library(tidyverse)
 library(tidytext)
 library(stopwords)
+library(scales) 
+library(lubridate) 
+library(corrplot)
+
 theme_set(theme_light())
 color1 <- c("#EC7063", "#5DADE2", "#58D68D", "#AF7AC5")
 
-library(scales) 
-library(reactable) 
-library(lubridate) 
-library(corrplot)
-library(wordcloud2)
 
 ### Importing tweets
 # api keys
-create_token(app = 'tw_recent',
-             consumer_key = "XXX",
-             consumer_secret = "XXX",
-             access_token = "XXX",
-             access_secret = "XXX")
+# create_token(app = 'tw_recent',
+#              consumer_key = "XXX",
+#              consumer_secret = "XXX",
+#              access_token = "XXX",
+#              access_secret = "XXX")
+# 
+# tw_retrieve <- get_timeline(c("WSJ","nytimes","business","FinancialTimes","washingtonpost"), n=3200)
+# 
+# write_as_csv(tw_retrieve, "media.csv")
 
-tw_retrieve <- get_timeline(c("WSJ","nytimes","business","FinancialTimes","washingtonpost"), n=3200)
-
-write_as_csv(tw_retrieve, "21_media.csv")
+tw_original <- read_twitter_csv("media.csv")
 
 ### Overview
 tw_original %>%
@@ -65,7 +66,7 @@ reg <- "([^A-Za-z\\d#@']|'(?![A-Za-z\\d])|'s|(?<=\\s)')" #to filter words
 tw_words <- tw_media %>%
   #filter(is_retweet == FALSE) %>% 
   select(-geo_coords, -favorite_count, -retweet_count) %>%
-  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>% #deleting urls
+  mutate(text = str_replace_all(text, "https://t.co/[A-Za-z\\d]+|&amp;", "")) %>% 
   unnest_tokens(words, text, token = "regex", pattern = reg) %>%
   filter(!words %in% stop_words$word, 
          !str_detect(words, "^000"),
@@ -283,13 +284,3 @@ tw_media %>%
   theme(panel.background = element_rect(fill = "white"),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank())
-
-### wordcloud
-tw_words %>%
-  rename(word = words) %>%
-  filter(!word %in% c('opinion','ft','edition','times','story','front','page',
-                      'read','writes','breaking','analysis','week',
-                      'york','#wsjwhatsnow', '@wsjopinion')) %>%
-  count(word, sort = TRUE) %>%
-  top_n(1000) %>%
-  wordcloud2(size = 1, shape = 'square')
